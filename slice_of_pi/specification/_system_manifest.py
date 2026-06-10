@@ -70,7 +70,7 @@ class SystemPermissions:
 class SystemManifest:
     """Declarative specification for a multi-agent system.
 
-    This is the top-level contract for deploying a fleet of
+    This is the top-level contract for deploying slices of
     collaborating agents from a single YAML file. Deploying
     a system manifest is the recommended way to bootstrap
     a multi-agent workflow.

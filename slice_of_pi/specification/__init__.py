@@ -4,7 +4,7 @@ Specification Layer
 Declarative configuration contracts for agents and multi-agent
 systems. These are the "single source of truth" formats that can
 be version-controlled, shared, and used to reproducibly deploy
-agent fleets.
+agent slices.
 
 Interface catalog:
   AgentManifest       — Single agent specification

@@ -1,0 +1,43 @@
+{
+  "root": "/Users/kc/doc-kbs/pi-coding-agent/source",
+  "doc_files": 26,
+  "nodes": 1182,
+  "edges": 1156,
+  "edge_relations": {
+    "contains": 1018,
+    "references": 113,
+    "route": 25
+  },
+  "structural_lane_tokens": {
+    "input": 0,
+    "output": 0
+  },
+  "llm_lane_would_cost": {
+    "doc_files": 26,
+    "corpus_words": 132840,
+    "naive_full_corpus_tokens": 177120,
+    "llm_lane_input_tokens_est": 90458,
+    "llm_lane_subagents": 2,
+    "note": "estimate using graphify's own heuristics (chars/4 + per-chunk prompt template); output tokens not included"
+  },
+  "elapsed_sec": 0.4,
+  "stage2_graph": {
+    "graph": true,
+    "nodes": 1117,
+    "edges": 1156,
+    "communities": 60,
+    "god_nodes": [
+      "ExtensionAPI Methods",
+      "Extensions",
+      "TUI Components",
+      "All Settings",
+      "Options Reference",
+      "Custom Providers",
+      "ExtensionContext",
+      "All Actions",
+      "Custom Models",
+      "Events"
+    ],
+    "html": true
+  }
+}

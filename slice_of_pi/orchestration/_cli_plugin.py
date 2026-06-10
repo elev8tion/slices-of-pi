@@ -48,7 +48,7 @@ class CLIPlugin(ABC):
         """Connect to the agent platform using a named profile.
 
         Args:
-            profile: Named configuration profile (from ~/.agentforge/profiles).
+            profile: Named configuration profile (from ~/.slice-of-pi/profiles).
 
         Returns:
             A client object for interacting with the platform.

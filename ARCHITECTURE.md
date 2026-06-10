@@ -5,7 +5,7 @@
 **Date**: 2026-06-09
 **Status**: Proposed
 
-**Context**: The trinity-toolchest contains a fully implemented agent orchestration platform with ~1,500 source files across 12 modules. The STUBS.md master index defines 22+ abstract interfaces that form the architectural contract. We need to extract these interfaces into a standalone, minimal package so the new "Slice Of Pi" framework can be built against a clean contract — not against a specific implementation.
+**Context**: A prior agent orchestration codebase defined 22+ abstract interfaces across 12 modules that form a coherent architectural contract. These interfaces were extracted into Slice Of Pi — a standalone, minimal contract package — so the new framework can be built against clean abstractions, not against any specific prior implementation.
 
 **Decision**: Extract every interface as either a Python Protocol/ABC or a TypeScript `interface`, organized into mirroring layers. No implementation logic.
 

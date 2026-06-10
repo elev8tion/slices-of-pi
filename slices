@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+set -e
+
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+PYTHON="${PYTHON:-python3}"
+ORCH_PORT="${PI_ORCHESTRATOR_PORT:-8420}"
+VITE_PORT="${PI_DASHBOARD_PORT:-5173}"
+
+# ── Kill existing instances ──────────────────────────────────────
+kill $(lsof -ti:$ORCH_PORT) 2>/dev/null || true
+kill $(lsof -ti:$VITE_PORT) 2>/dev/null || true
+sleep 0.5
+
+# ── Auto-install dependencies if needed ──────────────────────────
+echo "→ Checking dependencies..."
+
+# Python
+if ! $PYTHON -c "import fastapi" 2>/dev/null; then
+  echo "  Installing Python packages..."
+  $PYTHON -m pip install fastapi uvicorn pydantic apscheduler pyyaml -q
+fi
+
+# Node
+if [ ! -d "$ROOT/dashboard/node_modules" ]; then
+  echo "  Installing Node packages..."
+  cd "$ROOT/dashboard" && npm install --silent
+fi
+
+# Build dashboard for production serve
+echo "  Building dashboard..."
+cd "$ROOT/dashboard" && npx vite build --logLevel error
+
+# ── Start orchestrator with dashboard ────────────────────────────
+cd "$ROOT"
+$PYTHON start-orchestrator.py --serve-dashboard &
+ORCH_PID=$!
+
+# ── Wait for orchestrator ────────────────────────────────────────
+for i in {1..15}; do
+  if curl -s "http://127.0.0.1:$ORCH_PORT/health" > /dev/null 2>&1; then
+    break
+  fi
+  sleep 0.5
+done
+
+echo ""
+echo "  ███████╗██╗     ██╗ ██████╗███████╗███████╗"
+echo "  ██╔════╝██║     ██║██╔════╝██╔════╝██╔════╝"
+echo "  ███████╗██║     ██║██║     █████╗  ███████╗"
+echo "  ╚════██║██║     ██║██║     ██╔══╝  ╚════██║"
+echo "  ███████║███████╗██║╚██████╗███████╗███████║"
+echo "  ╚══════╝╚══════╝╚═╝ ╚═════╝╚══════╝╚══════╝"
+echo ""
+echo "  Dashboard → http://localhost:$ORCH_PORT"
+echo "  API       → http://localhost:$ORCH_PORT/health"
+echo "  Docs      → http://localhost:$ORCH_PORT/docs"
+echo ""
+echo "  Press Ctrl+C to stop"
+echo ""
+
+# ── Open browser ─────────────────────────────────────────────────
+open "http://localhost:$ORCH_PORT" 2>/dev/null || true
+
+# ── Cleanup ──────────────────────────────────────────────────────
+cleanup() {
+  echo ""
+  echo "  Shutting down..."
+  kill $ORCH_PID 2>/dev/null || true
+  wait $ORCH_PID 2>/dev/null || true
+  echo "  Done."
+  exit 0
+}
+trap cleanup INT TERM
+
+wait

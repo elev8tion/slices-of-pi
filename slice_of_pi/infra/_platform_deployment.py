@@ -11,7 +11,7 @@ AgentManifest/SystemManifest).
 
 Example YAML:
   platform:
-    name: agentforge
+    name: slice-of-pi
     version: 1.0.0
   providers:
     - docker
@@ -104,7 +104,7 @@ class PlatformDeployment:
     """
 
     platform: dict[str, str] = field(default_factory=lambda: {
-        "name": "agentforge",
+        "name": "slice-of-pi",
         "version": "1.0.0",
     })
     providers: list[str] = field(default_factory=lambda: ["docker"])

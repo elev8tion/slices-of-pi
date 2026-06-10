@@ -27,7 +27,7 @@ class TemplateEngine(ABC):
     template defaults.
 
     Example:
-        engine = FileSystemTemplateEngine("/etc/agentforge/templates")
+        engine = FileSystemTemplateEngine("/etc/slice-of-pi/templates")
         config = await engine.instantiate("business-assistant", {
             "name": "my-assistant",
             "resources": {"cpu": "4", "memory": "8Gi"},
