@@ -1,7 +1,7 @@
 """
 Pi Session Service — manage pi agent sessions.
 
-Replaces Trinity's docker_service.py. Instead of Docker containers,
+Manages pi agents as subprocess sessions. Instead of Docker containers,
 agents are pi sessions managed via asyncio subprocess and JSONL parsing.
 
 Each agent has a session file at:

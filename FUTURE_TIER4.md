@@ -8,7 +8,6 @@ No timeline. Build when needed.
 
 ## 1. Agent-to-Agent (A2A) Protocol
 
-Trinity source: `routers/a2a.py`, `services/a2a_card_service.py`
 
 ### What it is
 Agents expose an A2A v1.0 Agent Card — the standard Google/OpenAI
@@ -45,7 +44,6 @@ The card is generated from the agent's config (tools, skills, model)
 
 ## 2. Event Subscriptions & Webhooks
 
-Trinity source: `routers/event_subscriptions.py`
 
 ### What it is
 Let external services subscribe to slice of pi agent events. When an
@@ -88,7 +86,6 @@ also dispatch to webhooks.
 
 ## 3. Public Agent Links
 
-Trinity source: `routers/public_links.py`, `routers/public.py`,
 `routers/public_memory.py`, `PublicLinksPanel.vue`
 
 ### What it is
@@ -139,7 +136,6 @@ GET  /api/public/{token}/info          — get public agent info
 
 ## 4. Observability & Cost Tracking
 
-Trinity source: `routers/observability.py`, `stores/observability.js`,
 `ObservabilityPanel.vue`, `services/log_archive_service.py`
 
 ### What it is
@@ -196,7 +192,6 @@ GET /api/observability/tokens      — token usage over time
 
 ## 5. Channel Integrations
 
-Trinity source: `routers/slack.py`, `services/slack_service.py`,
 `routers/telegram.py`, `services/telegram_media.py`,
 `routers/whatsapp.py`, `SlackChannelPanel.vue`,
 `TelegramChannelPanel.vue`, `WhatsAppChannelPanel.vue`
@@ -264,7 +259,6 @@ DELETE /api/agents/{id}/whatsapp/channels/{id}
 
 ## 6. Image Generation
 
-Trinity source: `routers/image_generation.py`,
 `services/image_generation_service.py`,
 `services/image_generation_prompts.py`
 
@@ -301,7 +295,6 @@ GET  /api/agents/{id}/images/history    — past generations
 
 ## 7. Subscription & Billing
 
-Trinity source: `routers/subscriptions.py`,
 `services/subscription_service.py`, `services/entitlement_service.py`,
 `routers/nevermined.py`, `services/nevermined_payment_service.py`
 
@@ -350,7 +343,6 @@ GET  /api/subscriptions/current        — current plan + usage
 
 ## 8. Slice Management (Multi-Server)
 
-Trinity source: `routers/fleet.py`, `services/capacity_manager.py`,
 `services/fleet_audit_service.py`, `routers/ops.py`
 
 ### What it is
@@ -394,7 +386,6 @@ POST /api/slices/nodes/{id}/drain  — drain node (migrate agents)
 
 ## 9. Admin Recovery & Debug Tools
 
-Trinity source: `routers/admin_recovery.py`, `routers/debug.py`
 
 ### What it is
 Emergency admin tools: recover orphaned sessions, force-stop stuck
@@ -433,7 +424,6 @@ mode (`PI_NO_AUTH=1`), still require an extra confirmation header
 
 ## 10. Voice (Twilio/PSTN)
 
-Trinity source: `services/gemini_voice.py`, `routers/voice.py`
 
 ### What it is
 Phone call voice interface. Users call a phone number, speak to a

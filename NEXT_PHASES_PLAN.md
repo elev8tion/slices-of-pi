@@ -8,7 +8,7 @@ independently. Stop and report after each phase.
 
 ## Phase 1 — Chat UI Upgrade (3 workers in parallel)
 
-**Goal**: Replace Slice of Pi's basic `ChatPanel.vue` with Trinity's
+**Goal**: Replace Slice of Pi's basic `ChatPanel.vue` with a richer
 rich chat component architecture.
 
 ### Worker 1.1 — ChatBubble + ChatMessages
