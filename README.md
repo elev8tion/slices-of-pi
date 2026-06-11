@@ -1,102 +1,128 @@
-# Slice Of Pi
+# Slice of Pi
 
-> Architectural contract layer for a new agentic framework.
+A web dashboard and API server for managing multiple pi coding agents.
 
-**Slice Of Pi** provides clean, minimal abstract interfaces (ABCs, Protocols, dataclasses, TypeScript interfaces) that define the contracts for building agent orchestration systems. No implementation — just structure.
+Run `./slices` to start everything — a FastAPI backend serves the Vue 3 dashboard on `localhost:8420`, where you can create agents, chat with them, view session history, and control the whole system.
 
-## What This Is
-
-A set of 22 abstract interfaces organized across 4 architecture layers:
-
-```
-┌───────────────────────────────────────────────────────────┐
-│               Plugin / Extension Layer                      │
-│  UIPlugin  │  CLIPlugin  │  ChannelAdapter  │  GuardrailHook│
-├───────────────────────────────────────────────────────────┤
-│               Orchestration Layer                           │
-│  AgentRuntime  │  WorkflowEngine  │  ScheduleEngine        │
-│  EventBus  │  SkillProvider  │  TemplateEngine             │
-├───────────────────────────────────────────────────────────┤
-│               Execution Layer                               │
-│  ExecutionEnvironment  │  AgentLifecycle                    │
-│  CredentialProvider  │  AgentCapability                     │
-├───────────────────────────────────────────────────────────┤
-│               Specification Layer                           │
-│  AgentManifest  │  SystemManifest  │  PlatformDeployment   │
-└───────────────────────────────────────────────────────────┘
-```
-
-## Installation
-
-```bash
-pip install -e /Users/kc/slice-of-pi
-```
+---
 
 ## Quick Start
 
-```python
-from slice_of_pi.core import AgentLifecycle, AgentCapability, CredentialProvider
-from slice_of_pi.orchestration import AgentRuntime, WorkflowEngine, EventBus
-from slice_of_pi.specification import AgentManifest, SystemManifest
-
-# All interfaces are abstract — implement them:
-class MyRuntime(AgentRuntime):
-    async def create(self, config): ...
-    # ... implement remaining methods
+```bash
+./slices
 ```
 
-## Package Structure
+Opens the dashboard at `http://localhost:8420`. No login required in single-user mode.
+
+## Features
+
+### Core
+- **[Dashboard](/)** — agent grid with live status, stats, host telemetry, activity feed
+- **[Agents](/agents)** — create, edit, tag, search, delete agents with model/tools/skills config
+- **[Chat](/agents)** — SSE streaming chat with markdown, tool calls, file attach, session history
+- **[Terminal](/agents)** — live pseudo-terminal to each agent via WebSocket + xterm.js
+- **[Sessions](/sessions)** — session history with fork, export, replay timeline
+
+### Productivity
+- **[Slice Plays](/agents)** — one-click skill execution from the dashboard
+- **[Credentials](/agents)** — encrypted API key storage per agent with env injection
+- **[Git](/agents)** — GitHub-backed agent configs with commit/push/pull
+- **[Tags](/agents)** — organize and filter agents by custom labels
+- **[Model Selector](/agents)** — searchable model dropdown with provider badges
+
+### Observability
+- **[Audit Log](/audit)** — full event trail with filters, date range, CSV export
+- **[System Console](/console)** — live log stream of the orchestrator
+- **[Slice Operations](/settings)** — stop/restart all agents, scheduler controls
+- **[Operator Queue](/ops)** — human-in-loop approval for agent requests
+- **[Host Telemetry](/)** — CPU/RAM/Disk sparklines in the nav bar
+
+### System
+- **[Voice](/)** — system voice with intent parsing (create/delete/list agents, navigate pages)
+- **[Voice Workspace](/agents)** — per-agent voice mode with Web Speech API
+- **[Replay](/replay)** — zoomable timeline of agent session activity
+- **[File Manager](/agents)** — browse/upload/preview agent workspace files
+- **[YAML Editor](/settings)** — in-browser config editing with syntax highlighting
+- **[MCP Keys](/settings)** — encrypted MCP server key management
+- **[Notifications](/)** — real-time toasts on agent lifecycle events
+
+### Collaboration
+- **[Sharing](/agents)** — share agents by email with chat/admin permissions
+- **[Teams](/teams)** — deploy multi-agent teams from `~/.pi/agents/teams.yaml`
+- **[Schedules](/schedules)** — cron-based recurring agent execution
+- **[Templates](/templates)** — persona templates and prompt template editing
+
+---
+
+## Architecture
 
 ```
-slice_of_pi/
-├── __init__.py          # Package root
-├── shared.py            # Shared types, dataclasses, enums
-├── core/                # AgentLifecycle, AgentCapability, CredentialProvider
-├── orchestration/       # AgentRuntime, WorkflowEngine, EventBus, SkillProvider, ChannelAdapter, CLIPlugin, AgentClient
-├── execution/           # ExecutionEnvironment, GuardrailHook
-├── specification/       # AgentManifest, SystemManifest
-├── infra/               # TemplateEngine, ScheduleEngine, PlatformDeployment
-├── testing/             # TestFixtureFactory, ScenarioRunner
-└── interfaces/          # TypeScript interfaces (UIPlugin, DashboardWidget, ToolRegistry, MCPTransport)
+Browser (Vue 3 + xterm.js)
+    │  WebSocket / HTTP
+    ▼
+FastAPI (port 8420)
+    │
+    ├── SQLite (~/.pi/agent/orchestrator.db)
+    ├── JSONL session files (~/.pi/agent/sessions/)
+    ├── pi binary (subprocess per agent)
+    └── Event bus (in-process WebSocket pub/sub)
 ```
 
-## Interface Catalog
+- **Backend**: FastAPI with ~90+ API routes, SQLite, WebSocket event bus
+- **Frontend**: Vue 3 + TypeScript + Pinia + Tailwind CSS
+- **Design**: Dark theme with lime accent (`#9DD522`), transparent inputs with backdrop blur
+- **Auth**: JWT-based with `PI_NO_AUTH=1` for single-user mode
 
-| # | Interface | Layer | Language | Purpose |
-|---|-----------|-------|----------|---------|
-| 1 | `AgentLifecycle` | Core | Python | Agent state machine (CREATED → RUNNING → STOPPED) |
-| 2 | `AgentCapability` | Core | Python | Composable agent capabilities |
-| 3 | `CredentialProvider` | Core | Python | OAuth/API key/PAT injection |
-| 4 | `AgentRuntime` | Orchestration | Python | Abstract execution environment |
-| 5 | `WorkflowEngine` | Orchestration | Python | Multi-step workflow execution |
-| 6 | `EventBus` | Orchestration | Python | Real-time pub/sub |
-| 7 | `SkillProvider` | Orchestration | Python | Skill injection and marketplace |
-| 8 | `ChannelAdapter` | Orchestration | Python | External message channels |
-| 9 | `CLIPlugin` | Orchestration | Python | CLI command extension |
-| 10 | `AgentClient` | Orchestration | Python | Programmatic agent interaction |
-| 11 | `ExecutionEnvironment` | Execution | Python | Sandboxed execution |
-| 12 | `GuardrailHook` | Execution | Python | Pre/post-execution safety hooks |
-| 13 | `AgentManifest` | Specification | Python | Single agent specification |
-| 14 | `SystemManifest` | Specification | Python | Multi-agent system specification |
-| 15 | `TemplateEngine` | Infrastructure | Python | Agent template instantiation |
-| 16 | `ScheduleEngine` | Infrastructure | Python | Cron-based recurring execution |
-| 17 | `PlatformDeployment` | Infrastructure | Python | Declarative platform deployment |
-| 18 | `TestFixtureFactory` | Testing | Python | Deterministic test fixtures |
-| 19 | `ScenarioRunner` | Testing | Python | End-to-end scenario testing |
-| 20 | `UIPlugin` | Plugin | TypeScript | Dashboard extension system |
-| 21 | `DashboardWidget` | Plugin | TypeScript | Pluggable dashboard widgets |
-| 22 | `ToolRegistry` | Plugin | TypeScript | MCP tool registry |
-| 23 | `MCPTransport` | Plugin | TypeScript | MCP protocol transport layer |
-| 24 | `ToolDefinition` | Plugin | TypeScript | MCP tool definition |
+See [DESIGN.md](./DESIGN.md) for the design system.
+See [PRODUCTIZATION_PATH.md](./PRODUCTIZATION_PATH.md) for multi-user / SaaS roadmap.
+See [FUTURE_TIER4.md](./FUTURE_TIER4.md) for enterprise features (Slack, Telegram, billing, fleet).
 
-## Architecture Decision Record
+---
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full rationale:
-- Why Protocols over ABCs where possible
-- Why dataclasses for specification types
-- Layer dependency rules
-- TypeScript interface strategy
+## Project Structure
 
-## License
+```
+├── pi_orchestrator/          # FastAPI backend
+│   ├── main.py               # App entry, router registration
+│   ├── config.py             # Paths, env vars
+│   ├── database.py           # SQLite schema + CRUD
+│   ├── models.py             # Pydantic models
+│   ├── routers/              # 20+ API route modules
+│   │   ├── agents.py, chat.py, sessions.py, ...
+│   │   ├── tags.py, telemetry.py, console.py
+│   │   ├── auth.py, users.py, sharing.py
+│   │   ├── credentials.py, git.py, files.py
+│   │   ├── operator_queue.py, ops.py, audit_log.py
+│   │   ├── voice.py, terminal.py, mcp_keys.py
+│   │   └── system.py, settings_router.py, ...
+│   └── services/             # Backend services
+│       ├── pi_session_service.py
+│       ├── system_chat_service.py
+│       ├── ws_ticket_service.py
+│       ├── git_service.py
+│       └── audit_service.py
+├── dashboard/                # Vue 3 frontend
+│   ├── src/
+│   │   ├── components/       # 40+ Vue components
+│   │   │   ├── chat/         # ChatBubble, ChatInput, ...
+│   │   │   ├── NavIsland.vue # Top navigation bar
+│   │   │   └── Sidebar.vue   # Retractable sidebar
+│   │   ├── views/            # 15+ page views
+│   │   ├── stores/           # Pinia stores
+│   │   └── assets/           # CSS, logos
+│   └── tailwind.config.js    # Design system tokens
+├── tests/                    # 18 pytest test files
+├── slices                    # Launch script
+└── DESIGN.md                 # Design system documentation
+```
 
-MIT
+---
+
+## Commands
+
+| Command | What it does |
+|---------|-------------|
+| `./slices` | Build dashboard + start orchestrator on port 8420 |
+| `PI_NO_AUTH=1 python3 start-orchestrator.py` | Start without auth (dev mode) |
+| `python3 -m pytest tests/ -v` | Run all tests |
+| `python3 -m pytest tests/test_e2e_api.py -v` | Run end-to-end API tests |
