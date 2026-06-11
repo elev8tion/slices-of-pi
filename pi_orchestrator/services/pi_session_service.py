@@ -77,17 +77,21 @@ async def create_agent(config: dict) -> str:
     Returns:
         agent_id
     """
-    agent = db.create_agent(
-        name=config["name"],
-        model=config.get("model", DEFAULT_MODEL),
-        persona=config.get("persona"),
-        tools=config.get("tools"),
-        skills=config.get("skills"),
-        extensions=config.get("extensions"),
-        system_prompt=config.get("system_prompt"),
-        git_repo=config.get("git_repo"),
-        schedule_cron=config.get("schedule"),
-    )
+    import sqlite3
+    try:
+        agent = db.create_agent(
+            name=config["name"],
+            model=config.get("model", DEFAULT_MODEL),
+            persona=config.get("persona"),
+            tools=config.get("tools"),
+            skills=config.get("skills"),
+            extensions=config.get("extensions"),
+            system_prompt=config.get("system_prompt"),
+            git_repo=config.get("git_repo"),
+            schedule_cron=config.get("schedule"),
+        )
+    except sqlite3.IntegrityError as e:
+        raise ValueError(str(e))
 
     _session_dir(config["name"]).mkdir(parents=True, exist_ok=True)
 

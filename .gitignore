@@ -3,3 +3,12 @@ __pycache__/
 *.pyc
 *.egg-info/
 node_modules/
+*.db
+*.db-shm
+*.db-wal
+.pi/
+.env
+orchestrator.key
+dashboard/dist/
+*-done.txt
+progress.md

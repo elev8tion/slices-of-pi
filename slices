@@ -17,7 +17,7 @@ echo "→ Checking dependencies..."
 # Python
 if ! $PYTHON -c "import fastapi" 2>/dev/null; then
   echo "  Installing Python packages..."
-  $PYTHON -m pip install fastapi uvicorn pydantic apscheduler pyyaml -q
+  $PYTHON -m pip install fastapi uvicorn pydantic apscheduler pyyaml psutil -q
 fi
 
 # Node
@@ -32,6 +32,7 @@ cd "$ROOT/dashboard" && npx vite build --logLevel error
 
 # ── Start orchestrator with dashboard ────────────────────────────
 cd "$ROOT"
+export PI_NO_AUTH=1
 $PYTHON start-orchestrator.py --serve-dashboard &
 ORCH_PID=$!
 

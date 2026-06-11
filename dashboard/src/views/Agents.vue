@@ -72,15 +72,15 @@ const statusColors: Record<string, string> = {
       <!-- Create form -->
       <div v-if="showCreate" class="card p-4 mb-4 flex items-center gap-3">
         <input v-model="newName" @keyup.enter="createAgent" placeholder="Agent name..."
-          class="flex-1 bg-white/4 border border-white/8 rounded-btn px-3 py-2 text-sm text-text-primary outline-none focus:border-accent/30" />
+          class="input-base flex-1 text-sm" />
         <button @click="createAgent" class="btn-primary text-xs px-4 py-2">Create</button>
         <button @click="showCreate = false" class="text-xs text-text-tertiary hover:text-text-secondary">Cancel</button>
       </div>
 
       <!-- Filters -->
       <div class="flex items-center gap-3 mb-4">
-        <input v-model="search" placeholder="Search agents..." class="bg-white/4 border border-white/8 rounded-btn px-3 py-1.5 text-xs text-text-primary w-48 outline-none focus:border-accent/30" />
-        <select v-model="statusFilter" class="bg-white/4 border border-white/8 rounded-btn px-2 py-1.5 text-xs text-text-tertiary outline-none">
+        <input v-model="search" placeholder="Search agents..." class="input-base w-48 text-xs" />
+        <select v-model="statusFilter" class="bg-transparent backdrop-blur-sm border border-white/12 rounded-btn px-2 py-1.5 text-xs text-text-tertiary outline-none">
           <option value="">All statuses</option>
           <option value="idle">Idle</option>
           <option value="busy">Busy</option>

@@ -40,28 +40,48 @@ export const useAppStore = defineStore('app', () => {
   const agents = ref<Agent[]>([])
   const activities = ref<Activity[]>([])
   const connected = ref(false)
+  const sidebarCollapsed = ref(false)
   const ws = ref<WebSocket | null>(null)
 
   const onlineAgents = computed(() => agents.value.filter(a => a.status === 'idle' || a.status === 'busy').length)
   const busyAgents = computed(() => agents.value.filter(a => a.status === 'busy').length)
   const errorAgents = computed(() => agents.value.filter(a => a.status === 'error').length)
 
+  function toggleSidebar() {
+    sidebarCollapsed.value = !sidebarCollapsed.value
+  }
+
   async function fetchAgents() {
     try {
       const res = await fetch('/api/agents')
-      agents.value = await res.json()
-    } catch (e) {
-      toastBus.error('Failed to load agents')
-    }
+      if (res.ok) agents.value = await res.json()
+    } catch { /* silent */ }
+  }
+
+  async function fetchAgentDetail(id: string) {
+    try {
+      const res = await fetch(`/api/agents/${id}`)
+      if (res.ok) return await res.json()
+    } catch { /* silent */ }
+    return null
+  }
+
+  async function deleteAgent(id: string) {
+    try {
+      const res = await fetch(`/api/agents/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        agents.value = agents.value.filter(a => a.id !== id)
+        return true
+      }
+    } catch { /* silent */ }
+    return false
   }
 
   async function fetchActivities() {
     try {
       const res = await fetch('/api/activities')
-      activities.value = await res.json()
-    } catch (e) {
-      // Silent — activities are non-critical
-    }
+      if (res.ok) activities.value = await res.json()
+    } catch { /* silent */ }
   }
 
   function connectWebSocket() {
@@ -70,17 +90,19 @@ export const useAppStore = defineStore('app', () => {
     socket.onopen = () => { connected.value = true }
     socket.onclose = () => { connected.value = false; setTimeout(connectWebSocket, 3000) }
     socket.onmessage = (event) => {
-      const data = JSON.parse(event.data)
-      if (data.type === 'agent_created' || data.type === 'agent_deleted') {
-        fetchAgents()
-      }
-      fetchActivities()
+      try {
+        const data = JSON.parse(event.data)
+        if (data.type === 'agent_created' || data.type === 'agent_deleted') fetchAgents()
+        fetchActivities()
+      } catch { /* silent */ }
     }
     ws.value = socket
   }
 
   return {
-    agents, activities, connected, onlineAgents, busyAgents, errorAgents,
-    fetchAgents, fetchActivities, connectWebSocket,
+    agents, activities, connected, sidebarCollapsed,
+    onlineAgents, busyAgents, errorAgents,
+    fetchAgents, fetchAgentDetail, deleteAgent,
+    fetchActivities, connectWebSocket, toggleSidebar,
   }
 })

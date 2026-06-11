@@ -119,23 +119,24 @@ function closeDetail() { selectedAgent.value = null }
 }
 .stats-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 12px;
   margin-bottom: 24px;
 }
 .agent-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 12px;
   margin-bottom: 24px;
 }
 .header-card {
-  background: rgba(99,102,241,0.06);
-  border-color: rgba(99,102,241,0.12);
+  background: rgba(157,213,34,0.06);
+  border-color: rgba(157,213,34,0.12);
+  min-height: 120px;
 }
 .bottom-row {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 12px;
 }
 .btn {
@@ -171,17 +172,10 @@ function closeDetail() { selectedAgent.value = null }
 
 @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
 
-@media (max-width: 1200px) {
-  .agent-grid { grid-template-columns: repeat(2, 1fr); }
-}
 @media (max-width: 968px) {
-  .stats-row { grid-template-columns: repeat(2, 1fr); }
-  .bottom-row { grid-template-columns: 1fr; }
   .dashboard { padding: 16px; }
 }
 @media (max-width: 768px) {
-  .agent-grid { grid-template-columns: 1fr; }
   .dash-header { flex-direction: column; align-items: flex-start; gap: 12px; }
-  .stats-row { grid-template-columns: 1fr; }
 }
 </style>

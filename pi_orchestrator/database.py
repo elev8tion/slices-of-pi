@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from .config import DATABASE_PATH
+from .config import DATABASE_PATH, DEFAULT_TOOLS
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -114,6 +114,78 @@ CREATE INDEX IF NOT EXISTS idx_activities_created ON activities(created_at DESC)
 CREATE INDEX IF NOT EXISTS idx_schedules_agent ON schedules(agent_id);
 CREATE INDEX IF NOT EXISTS idx_schedules_enabled ON schedules(enabled);
 CREATE INDEX IF NOT EXISTS idx_executions_schedule ON schedule_executions(schedule_id);
+
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    username TEXT NOT NULL UNIQUE,
+    email TEXT,
+    password_hash TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'user',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS tags (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    color TEXT DEFAULT '#9DD522',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS agent_tags (
+    agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+    tag_id TEXT NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+    PRIMARY KEY (agent_id, tag_id)
+);
+
+CREATE TABLE IF NOT EXISTS credentials (
+    id TEXT PRIMARY KEY,
+    agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    value TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS audit_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agent_id TEXT,
+    user_id TEXT,
+    action TEXT NOT NULL,
+    details TEXT,
+    ip_address TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS operator_queue (
+    id TEXT PRIMARY KEY,
+    agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+    agent_name TEXT,
+    item_type TEXT NOT NULL,
+    description TEXT,
+    details TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    priority INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL,
+    resolved_at TEXT,
+    resolved_by TEXT,
+    resolution TEXT
+);
+
+CREATE TABLE IF NOT EXISTS agent_shares (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL,
+    permission TEXT NOT NULL DEFAULT 'chat',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS access_requests (
+    id TEXT PRIMARY KEY,
+    email TEXT NOT NULL,
+    instance_url TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
 """
 
 
@@ -181,7 +253,7 @@ def create_agent(
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'created', ?, ?)""",
         (
             agent_id, name, persona, model,
-            json.dumps(tools or ["read", "bash", "web_search"]),
+            json.dumps(tools or DEFAULT_TOOLS),
             json.dumps(skills or []),
             json.dumps(extensions or []),
             system_prompt, git_repo, schedule_cron,
@@ -483,6 +555,46 @@ def list_schedule_executions(schedule_id: str, limit: int = 20) -> list[dict]:
         "SELECT * FROM schedule_executions WHERE schedule_id = ? ORDER BY started_at DESC LIMIT ?",
         (schedule_id, limit)
     ).fetchall()
+    return [dict(r) for r in rows]
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Users
+# ═══════════════════════════════════════════════════════════════════
+
+
+def get_user(user_id: str) -> Optional[dict]:
+    conn = _get_conn()
+    row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def get_user_by_username(username: str) -> Optional[dict]:
+    conn = _get_conn()
+    row = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
+    return dict(row) if row else None
+
+
+def get_user_by_email(email: str) -> Optional[dict]:
+    conn = _get_conn()
+    row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    return dict(row) if row else None
+
+
+def create_user(username: str, email: str, password_hash: str, role: str = "user") -> dict:
+    conn = _get_conn()
+    user_id = _new_id()
+    conn.execute(
+        "INSERT INTO users (id, username, email, password_hash, role) VALUES (?, ?, ?, ?, ?)",
+        (user_id, username, email, password_hash, role)
+    )
+    conn.commit()
+    return get_user(user_id)
+
+
+def list_users() -> list[dict]:
+    conn = _get_conn()
+    rows = conn.execute("SELECT id, username, email, role FROM users ORDER BY username").fetchall()
     return [dict(r) for r in rows]
 
 

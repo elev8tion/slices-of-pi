@@ -58,3 +58,27 @@
 .card:hover {
   @apply bg-surface-hover border-border-hover;
 }
+
+/* ── Input Base ───────────────────────────────────────────────── */
+.input-base {
+  background: transparent;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(233,236,224,0.15);
+  border-radius: 12px;
+  color: #E9ECE0;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 0.2s ease;
+  font-family: inherit;
+  font-size: inherit;
+}
+.input-base::placeholder {
+  color: rgba(233,236,224,0.20);
+}
+.input-base:focus {
+  border-color: #9DD522;
+}
+.input-base:hover {
+  border-color: rgba(233,236,224,0.25);
+}
