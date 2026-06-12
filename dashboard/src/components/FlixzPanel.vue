@@ -133,12 +133,7 @@ function clearResult() {
     <div class="flixz-header">
       <div class="flixz-brand">
         <!-- Slice of Pi logo replacement — no flixz branding -->
-        <svg class="flixz-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M12 2L2 7l10 5 10-5-10-5z" stroke="#9DD522"/>
-          <path d="M2 17l10 5 10-5" stroke="#9DD522" opacity="0.6"/>
-          <path d="M2 12l10 5 10-5" stroke="#9DD522" opacity="0.4"/>
-          <circle cx="12" cy="12" r="2" fill="#9DD522" opacity="0.3"/>
-        </svg>
+        <img src="/logo-nav.png" alt="Slice of Pi" class="flixz-logo" />
         <div class="flixz-title-section">
           <span class="flixz-title">Frame Extraction</span>
           <span class="flixz-subtitle">Video → frames → transcript for LLM analysis</span>
@@ -354,8 +349,8 @@ function clearResult() {
   gap: 10px;
 }
 .flixz-logo {
-  width: 28px;
   height: 28px;
+  width: auto;
 }
 .flixz-title-section {
   display: flex;
