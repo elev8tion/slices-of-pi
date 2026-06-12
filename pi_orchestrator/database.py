@@ -8,13 +8,50 @@ single-writer anyway, so async wouldn't help).
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
+import os
 import secrets
 import sqlite3
 import threading
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
+
+# Fernet encryption for connector auth_state
+_FERNET_KEY: bytes | None = None
+
+
+def _get_fernet_key() -> bytes:
+    """Get or derive a Fernet-compatible encryption key from hostname + port."""
+    global _FERNET_KEY
+    if _FERNET_KEY is not None:
+        return _FERNET_KEY
+    hostname = os.uname().nodename
+    port = os.getenv("PI_ORCHESTRATOR_PORT", "8420")
+    raw = hashlib.sha256(f"slice-of-pi-connector-{hostname}-{port}".encode()).digest()
+    _FERNET_KEY = base64.urlsafe_b64encode(raw)
+    return _FERNET_KEY
+
+
+def _encrypt_value(plaintext: str) -> str:
+    """Encrypt a string value using Fernet. Returns base64 ciphertext."""
+    try:
+        from cryptography.fernet import Fernet
+        return Fernet(_get_fernet_key()).encrypt(plaintext.encode()).decode()
+    except ImportError:
+        return plaintext  # Fallback: store as-is if cryptography not installed
+
+
+def _decrypt_value(ciphertext: str) -> str:
+    """Decrypt a Fernet-encrypted string."""
+    try:
+        from cryptography.fernet import Fernet, InvalidToken
+        return Fernet(_get_fernet_key()).decrypt(ciphertext.encode()).decode()
+    except (ImportError, InvalidToken):
+        return ciphertext
+
 from typing import Optional
 
 from .config import DATABASE_PATH, DEFAULT_TOOLS
@@ -37,6 +74,7 @@ CREATE TABLE IF NOT EXISTS agents (
     git_repo TEXT,
     schedule_cron TEXT,
     profile_json TEXT DEFAULT '{"static": {}, "dynamic": []}',
+    tags TEXT DEFAULT '[]',
     status TEXT NOT NULL DEFAULT 'created',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
@@ -257,6 +295,11 @@ def init_db() -> None:
         conn.execute("ALTER TABLE agents ADD COLUMN profile_json TEXT")
     except sqlite3.OperationalError:
         pass  # Column already exists
+    # Migrate: add tags column if missing
+    try:
+        conn.execute("ALTER TABLE agents ADD COLUMN tags TEXT DEFAULT '[]'")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
     conn.commit()\
 
 
@@ -319,6 +362,17 @@ def update_agent_status(agent_id: str, status: str) -> None:
         "UPDATE agents SET status = ?, updated_at = ?, last_active = ? WHERE id = ?",
         (status, _now_iso(), _now_iso(), agent_id)
     )
+    conn.commit()
+
+
+def update_agent(agent_id: str, tags: Optional[list[str]] = None) -> None:
+    """Update agent fields. Currently supports updating tags."""
+    conn = _get_conn()
+    if tags is not None:
+        conn.execute(
+            "UPDATE agents SET tags = ?, updated_at = ? WHERE id = ?",
+            (json.dumps(tags), _now_iso(), agent_id)
+        )
     conn.commit()
 
 
@@ -704,9 +758,14 @@ def active_session_count() -> int:
 # ═══════════════════════════════════════════════════════════════════
 
 
-def list_connectors(enabled_only: bool = False) -> list[dict]:
+def list_connectors(enabled_only: bool = False, agent_id: Optional[str] = None) -> list[dict]:
     conn = _get_conn()
-    if enabled_only:
+    if agent_id:
+        rows = conn.execute(
+            "SELECT * FROM connectors WHERE agent_id = ? ORDER BY created_at DESC",
+            (agent_id,)
+        ).fetchall()
+    elif enabled_only:
         rows = conn.execute("SELECT * FROM connectors WHERE enabled = 1 ORDER BY created_at DESC").fetchall()
     else:
         rows = conn.execute("SELECT * FROM connectors ORDER BY created_at DESC").fetchall()
@@ -716,7 +775,13 @@ def list_connectors(enabled_only: bool = False) -> list[dict]:
 def get_connector(connector_id: str) -> Optional[dict]:
     conn = _get_conn()
     row = conn.execute("SELECT * FROM connectors WHERE id = ?", (connector_id,)).fetchone()
-    return dict(row) if row else None
+    result = dict(row) if row else None
+    if result and result.get("auth_state"):
+        try:
+            result["auth_state"] = json.loads(_decrypt_value(result["auth_state"]))
+        except (json.JSONDecodeError, TypeError):
+            pass
+    return result
 
 
 def create_connector(
@@ -726,15 +791,20 @@ def create_connector(
     conn = _get_conn()
     connector_id = _new_id()
     now = _now_iso()
+    encrypted_auth = _encrypt_value(json.dumps(auth_state))
     conn.execute(
         """INSERT INTO connectors (id, agent_id, provider, label, auth_state,
            container_tags, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-        (connector_id, agent_id, provider, label, json.dumps(auth_state),
+        (connector_id, agent_id, provider, label, encrypted_auth,
          json.dumps(container_tags or []), now, now)
     )
     conn.commit()
-    return get_connector(connector_id)
+    result = get_connector(connector_id)
+    # Mask auth_state in the returned dict
+    if result:
+        result["auth_state"] = "••••••••"
+    return result
 
 
 def delete_connector(connector_id: str) -> bool:

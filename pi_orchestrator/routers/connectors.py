@@ -28,7 +28,7 @@ async def available_connectors():
 @router.get("")
 async def list_connectors(agent_id: Optional[str] = None):
     """List all configured connectors, optionally filtered by agent."""
-    connectors = db.list_connectors()
+    connectors = db.list_connectors(agent_id=agent_id)
     # Mask auth state
     for c in connectors:
         c["auth_state"] = "••••••••"
@@ -44,6 +44,11 @@ async def create_connector(body: dict):
             errors.append(f"{field} is required")
     if errors:
         raise HTTPException(status_code=400, detail=", ".join(errors))
+
+    # Validate agent exists
+    agent = db.get_agent(body["agent_id"])
+    if not agent:
+        raise HTTPException(status_code=404, detail=f"Agent not found: {body['agent_id']}")
 
     # Validate provider exists
     plugin = get_connector_plugin(body["provider"])
@@ -63,7 +68,6 @@ async def create_connector(body: dict):
         auth_state=auth_state,
         container_tags=body.get("container_tags"),
     )
-    connector["auth_state"] = "••••••••"
     return connector
 
 
