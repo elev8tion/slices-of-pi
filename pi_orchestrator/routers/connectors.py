@@ -25,6 +25,14 @@ async def available_connectors():
     return {"connectors": list_available()}
 
 
+@router.get("/reload")
+async def reload_plugins():
+    """Force rediscovery of all connector plugins."""
+    from ..services.connectors.registry import reload as reload_registry
+    reload_registry()
+    return {"status": "reloaded"}
+
+
 @router.get("")
 async def list_connectors(agent_id: Optional[str] = None):
     """List all configured connectors, optionally filtered by agent."""
@@ -68,6 +76,16 @@ async def create_connector(body: dict):
         auth_state=auth_state,
         container_tags=body.get("container_tags"),
     )
+    return connector
+
+
+@router.get("/{connector_id}")
+async def get_connector_detail(connector_id: str):
+    """Get a single connector's configuration."""
+    connector = db.get_connector(connector_id)
+    if not connector:
+        raise HTTPException(status_code=404, detail="Connector not found")
+    connector["auth_state"] = "••••••••"
     return connector
 
 

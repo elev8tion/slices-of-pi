@@ -181,6 +181,11 @@ async def stream_chat(
 
     if context_parts:
         full_context = "\n\n".join(context_parts)
+        # Guard: truncate if context exceeds 8000 chars (approx 2000 tokens)
+        MAX_CONTEXT_CHARS = 8000
+        if len(full_context) > MAX_CONTEXT_CHARS:
+            logger.warning(f"Context {len(full_context)} chars exceeds {MAX_CONTEXT_CHARS}, truncating")
+            full_context = full_context[:MAX_CONTEXT_CHARS] + "\n... (truncated)"
         existing_prompt = agent.get("system_prompt") or ""
         if existing_prompt:
             agent["system_prompt"] = existing_prompt + "\n\n" + full_context
