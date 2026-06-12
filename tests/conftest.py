@@ -298,6 +298,8 @@ def _build_test_app() -> FastAPI:
     from pi_orchestrator.routers.templates import router as templates_router
     from pi_orchestrator.routers.coms import router as coms_router
     from pi_orchestrator.routers.teams import router as teams_router
+    from pi_orchestrator.routers.profile import router as profile_router
+    from pi_orchestrator.routers.connectors import router as connectors_router
 
     app.include_router(events_router)
     app.include_router(agents_router)
@@ -309,6 +311,8 @@ def _build_test_app() -> FastAPI:
     app.include_router(schedules_router)
     app.include_router(templates_router)
     app.include_router(coms_router)
+    app.include_router(profile_router)
+    app.include_router(connectors_router)
     app.include_router(teams_router)
 
     # Health endpoint

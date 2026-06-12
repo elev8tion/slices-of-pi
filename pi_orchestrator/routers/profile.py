@@ -10,7 +10,7 @@ All data flows through the existing agent_profile_service and database CRUD.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Body, HTTPException
 
 from .. import database as db
 from ..services.agent_profile_service import format_profile_as_prompt
@@ -44,8 +44,8 @@ async def get_agent_profile(agent_id: str):
     }
 
 
-@router.delete("/{agent_id}/profile/fact")
-async def forget_profile_fact(agent_id: str, body: dict):
+@router.post("/{agent_id}/profile/fact/forget")
+async def forget_profile_fact(agent_id: str, body: dict = Body(...)):
     """Forget a specific fact from an agent's profile.
 
     Body: {"fact": "Session #42: reviewed PR #84..."}

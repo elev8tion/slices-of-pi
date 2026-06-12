@@ -855,6 +855,17 @@ def prune_connector_sync_logs(retention_days: int = 30) -> int:
     return cursor.rowcount
 
 
+def expire_old_sessions(cutoff_iso: str) -> int:
+    """Mark non-running sessions older than cutoff as expired."""
+    conn = _get_conn()
+    cursor = conn.execute(
+        "UPDATE sessions SET status = 'expired' WHERE status NOT IN ('running') AND started_at < ?",
+        (cutoff_iso,)
+    )
+    conn.commit()
+    return cursor.rowcount
+
+
 def close_connections() -> None:
     """Close all thread-local database connections. Called at shutdown."""
     if hasattr(_local, "conn") and _local.conn is not None:
