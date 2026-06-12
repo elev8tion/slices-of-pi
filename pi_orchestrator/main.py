@@ -27,6 +27,7 @@ from .database import init_db, agent_count, active_session_count, close_connecti
 from .logging_config import setup_logging
 from .services.event_bus import event_bus
 from .services.pi_session_service import kill_all
+from .services.connectors.engine import sync_engine
 
 try:
     from .services.schedule_service import scheduler
@@ -51,6 +52,7 @@ from .routers.templates import router as templates_router
 from .routers.coms import router as coms_router
 from .routers.connectors import router as connectors_router
 from .routers.teams import router as teams_router
+from .routers.profile import router as profile_router
 from .routers.system import router as system_router
 from .routers.terminal import router as terminal_router
 from .routers.console import router as console_router
@@ -107,6 +109,9 @@ async def lifespan(app: FastAPI):
     await event_bus.start()
     logger.info("Event bus started (in-process)")
 
+    await sync_engine.start()
+    logger.info("Sync engine started")
+
     if scheduler:
         await scheduler.start()
         logger.info("Scheduler started")
@@ -125,6 +130,7 @@ async def lifespan(app: FastAPI):
 
     # ── Shutdown ─────────────────────────────────────────────────
     logger.info("Pi Orchestrator shutting down...")
+    await sync_engine.stop()
     await kill_all()
     if scheduler:
         await scheduler.stop()
@@ -166,6 +172,7 @@ app.include_router(extensions_router)
 app.include_router(schedules_router)
 app.include_router(templates_router)
 app.include_router(coms_router)
+app.include_router(profile_router)
 app.include_router(connectors_router)
 app.include_router(teams_router)
 app.include_router(system_router)

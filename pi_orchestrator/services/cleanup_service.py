@@ -107,6 +107,24 @@ class CleanupService:
         # Mark corresponding DB rows as expired (only non-running sessions)
         expired_rows = db.expire_old_sessions(cutoff_iso)
 
+        # NEW: Prune expired shared memory facts
+        try:
+            from ..services.shared_memory_service import cleanup_expired_facts
+            purged = cleanup_expired_facts(max_age_days=30)
+            if purged > 0:
+                logger.info("Cleanup: purged %d expired shared memory facts", purged)
+        except Exception:
+            logger.exception("Shared memory cleanup failed")
+
+        # NEW: Prune old connector sync logs
+        try:
+            from ..database import prune_connector_sync_logs
+            purged_logs = prune_connector_sync_logs(retention_days=30)
+            if purged_logs > 0:
+                logger.info("Cleanup: pruned %d old connector sync log entries", purged_logs)
+        except Exception:
+            logger.exception("Connector sync log pruning failed")
+
         # Log summary
         if removed_files > 0 or expired_rows > 0:
             logger.info(

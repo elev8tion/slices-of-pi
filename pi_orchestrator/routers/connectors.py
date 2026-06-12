@@ -79,6 +79,61 @@ async def create_connector(body: dict):
     return connector
 
 
+@router.post("/webhook/{token}")
+async def webhook_receive(token: str, request: dict):
+    """Receive data from an external webhook and write it to the shared knowledge pool.
+
+    The token must match a configured webhook connector's auth_state.
+    The request body becomes a knowledge fact for the connector's agent.
+    """
+    # Find connector by matching token in auth_state
+    connectors = db.list_connectors(enabled_only=True)
+    matched = None
+    for c in connectors:
+        try:
+            auth = db.get_connector(c["id"])
+            if auth and auth.get("auth_state", {}).get("token") == token:
+                matched = c
+                break
+        except Exception:
+            continue
+
+    if not matched:
+        raise HTTPException(status_code=401, detail="Invalid webhook token")
+
+    # Write to shared knowledge pool
+    from ..services.shared_memory_service import write_fact
+    import json
+    tags = json.loads(matched.get("container_tags", "[]")) if isinstance(matched.get("container_tags"), str) else (matched.get("container_tags") or [])
+    title = request.get("title", request.get("text", "webhook payload"))[:100]
+    body_text = json.dumps(request)[:500]
+
+    write_fact(
+        agent_id=matched["agent_id"],
+        tag=tags[0] if tags else "default",
+        fact=f"[webhook] {title}: {body_text}",
+        fact_type="dynamic",
+        metadata={"source": "webhook", "raw": body_text},
+    )
+
+    return {"status": "received"}
+
+
+@router.post("/{connector_id}/sync")
+async def trigger_connector_sync(connector_id: str):
+    """Trigger an immediate sync for a connector."""
+    connector = db.get_connector(connector_id)
+    if not connector:
+        raise HTTPException(status_code=404, detail="Connector not found")
+
+    from ..services.connectors.engine import sync_engine
+    result = await sync_engine.sync_one(connector_id)
+
+    if "error" in result:
+        raise HTTPException(status_code=502, detail=result["error"])
+    return {"status": "synced", "items": result.get("items", 0)}
+
+
 @router.get("/{connector_id}")
 async def get_connector_detail(connector_id: str):
     """Get a single connector's configuration."""

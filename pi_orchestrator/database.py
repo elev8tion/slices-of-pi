@@ -16,7 +16,7 @@ import secrets
 import sqlite3
 import threading
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 # Fernet encryption for connector auth_state
@@ -366,13 +366,38 @@ def update_agent_status(agent_id: str, status: str) -> None:
 
 
 def update_agent(agent_id: str, tags: Optional[list[str]] = None) -> None:
-    """Update agent fields. Currently supports updating tags."""
+    """Update agent fields. Currently supports updating tags.
+
+    When tags is provided, syncs to BOTH the agents.tags JSON column
+    AND the normalized tags + agent_tags tables for queryability.
+    """
     conn = _get_conn()
     if tags is not None:
+        # Update JSON column (fast path for pi_session_service)
         conn.execute(
             "UPDATE agents SET tags = ?, updated_at = ? WHERE id = ?",
             (json.dumps(tags), _now_iso(), agent_id)
         )
+        # Sync to normalized tables (queryable path)
+        conn.execute("DELETE FROM agent_tags WHERE agent_id = ?", (agent_id,))
+        for tag_name in tags:
+            # Upsert tag
+            existing = conn.execute(
+                "SELECT id FROM tags WHERE name = ?", (tag_name,)
+            ).fetchone()
+            if existing:
+                tag_id = existing["id"]
+            else:
+                tag_id = _new_id()
+                conn.execute(
+                    "INSERT INTO tags (id, name) VALUES (?, ?)",
+                    (tag_id, tag_name)
+                )
+            # Link agent to tag
+            conn.execute(
+                "INSERT OR IGNORE INTO agent_tags (agent_id, tag_id) VALUES (?, ?)",
+                (agent_id, tag_id)
+            )
     conn.commit()
 
 
@@ -817,6 +842,17 @@ def delete_connector(connector_id: str) -> bool:
 # ═══════════════════════════════════════════════════════════════════
 # Connection Cleanup
 # ═══════════════════════════════════════════════════════════════════
+
+
+def prune_connector_sync_logs(retention_days: int = 30) -> int:
+    """Remove connector sync log entries older than retention_days."""
+    conn = _get_conn()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=retention_days)).isoformat()
+    cursor = conn.execute(
+        "DELETE FROM connector_sync_log WHERE started_at < ?", (cutoff,)
+    )
+    conn.commit()
+    return cursor.rowcount
 
 
 def close_connections() -> None:
