@@ -14,6 +14,7 @@ import InfoPanel from './InfoPanel.vue'
 import StatusIndicator from './StatusIndicator.vue'
 import SlicePlaysPanel from './SlicePlaysPanel.vue'
 import ConnectorsPanel from './ConnectorsPanel.vue'
+import FlixzPanel from './FlixzPanel.vue'
 import RuntimeBadge from './RuntimeBadge.vue'
 
 interface Skill {
@@ -53,7 +54,7 @@ const skillsLoading = ref(false)
 // Available tags from the API
 const availableTags = ref<{name:string,color:string,agent_count:number}[]>([])
 
-const tabs = ['Info', 'Chat', 'Slice Plays', 'Terminal', 'Files', 'Git', 'Credentials', 'Connectors', 'Sharing', 'Activity', 'Edit', 'Settings']
+const tabs = ['Info', 'Chat', 'Slice Plays', 'Terminal', 'Files', 'Git', 'Credentials', 'Connectors', 'Flixz', 'Sharing', 'Activity', 'Edit', 'Settings']
 
 const initials = computed(() => props.agent?.name.slice(0, 1).toUpperCase() || '?')
 
@@ -261,6 +262,7 @@ function onTabClick(tab: string) {
           <GitPanel v-else-if="activeTab === 'git' && agent" :agent-id="agent.id" />
           <CredentialsPanel v-else-if="activeTab === 'credentials' && agent" :agent-id="agent.id" />
           <ConnectorsPanel v-else-if="activeTab === 'connectors' && agent" :agent-id="agent.id" />
+          <FlixzPanel v-else-if="activeTab === 'flixz' && agent" :agent-id="agent.id" />
           <SharingPanel v-else-if="activeTab === 'sharing' && agent" :agent-id="agent.id" />
           <div v-else-if="activeTab === 'activity'" class="text-xs text-text-tertiary text-center py-8">
             Activity log for {{ agent.name }}
