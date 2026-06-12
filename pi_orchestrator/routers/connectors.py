@@ -144,6 +144,44 @@ async def get_connector_detail(connector_id: str):
     return connector
 
 
+@router.patch("/{connector_id}")
+async def update_connector(connector_id: str, body: dict):
+    """Update a connector's configuration (label, auth_state, container_tags)."""
+    connector = db.get_connector(connector_id)
+    if not connector:
+        raise HTTPException(status_code=404, detail="Connector not found")
+
+    if "label" in body:
+        db._get_conn().execute(
+            "UPDATE connectors SET label = ?, updated_at = ? WHERE id = ?",
+            (body["label"], datetime.now(timezone.utc).isoformat(), connector_id)
+        )
+    if "auth_state" in body:
+        plugin = get_connector_plugin(connector["provider"])
+        if plugin:
+            try:
+                auth_state = await plugin.authorize(body["auth_state"])
+                import json
+                encrypted = db._encrypt_value(json.dumps(auth_state))
+                db._get_conn().execute(
+                    "UPDATE connectors SET auth_state = ?, updated_at = ? WHERE id = ?",
+                    (encrypted, datetime.now(timezone.utc).isoformat(), connector_id)
+                )
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=str(e))
+    if "container_tags" in body:
+        import json
+        db._get_conn().execute(
+            "UPDATE connectors SET container_tags = ?, updated_at = ? WHERE id = ?",
+            (json.dumps(body["container_tags"]), datetime.now(timezone.utc).isoformat(), connector_id)
+        )
+    db._get_conn().commit()
+    updated = db.get_connector(connector_id)
+    if updated:
+        updated["auth_state"] = "••••••••"
+    return updated
+
+
 @router.delete("/{connector_id}")
 async def delete_connector(connector_id: str):
     """Delete a connector configuration."""

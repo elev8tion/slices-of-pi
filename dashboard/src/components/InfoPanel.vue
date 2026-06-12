@@ -159,9 +159,57 @@ onMounted(load)
         </div>
       </section>
 
+      <!-- Agent Profile (memory) -->
+      <section>
+        <div class="section-label">Agent Memory</div>
+        <div class="info-grid">
+          <div class="info-field">
+            <span class="info-key">Static Facts</span>
+            <span class="info-val" id="profile-static-count">—</span>
+          </div>
+          <div class="info-field">
+            <span class="info-key">Dynamic Memories</span>
+            <span class="info-val" id="profile-dynamic-count">—</span>
+          </div>
+        </div>
+        <div id="profile-preview" class="mt-2 p-3 rounded-xl bg-white/[0.02] border border-white/6 text-[10px] text-text-tertiary font-mono leading-relaxed max-h-[160px] overflow-y-auto whitespace-pre-wrap">
+          Loading profile...
+        </div>
+      </section>
+
     </template>
   </div>
 </template>
+
+<script>
+import { onMounted } from 'vue'
+
+export default {
+  props: ['agentId'],
+  setup(props) {
+    onMounted(async () => {
+      try {
+        const res = await fetch(`/api/agents/${props.agentId}/profile`)
+        if (!res.ok) return
+        const data = await res.json()
+        const staticEl = document.getElementById('profile-static-count')
+        const dynamicEl = document.getElementById('profile-dynamic-count')
+        const previewEl = document.getElementById('profile-preview')
+        if (staticEl) staticEl.textContent = data.static_count ?? 0
+        if (dynamicEl) dynamicEl.textContent = data.dynamic_count ?? 0
+        if (previewEl) {
+          if (data.preview) {
+            previewEl.textContent = data.preview
+          } else {
+            previewEl.textContent = 'No profile data yet. Start a session to build memory.'
+          }
+        }
+      } catch {}
+    })
+    return {}
+  }
+}
+</script>
 
 <style scoped>
 .info-panel {
