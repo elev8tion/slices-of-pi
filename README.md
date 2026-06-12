@@ -113,7 +113,9 @@ See [FUTURE_TIER4.md](./FUTURE_TIER4.md) for enterprise features (Slack, Telegra
 │   └── tailwind.config.js    # Design system tokens
 ├── tests/                    # 18 pytest test files
 ├── slices                    # Launch script
-└── DESIGN.md                 # Design system documentation
+├── DESIGN.md                 # Design system documentation
+├── PLAN-maestro-execution.md # Agent profiles, shared knowledge, slice plays & connectors — execution plan for /pi-multi-agent-maestro
+└── docs/inspirations/        # Reference patterns from external projects
 ```
 
 ---

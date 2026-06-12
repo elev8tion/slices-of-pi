@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
+import yaml
 from fastapi import APIRouter
 
 from ..config import PI_SKILLS_DIR
@@ -18,22 +19,16 @@ router = APIRouter(prefix="/api/skills", tags=["skills"])
 
 
 def _parse_frontmatter(path: Path) -> dict | None:
-    """Extract YAML frontmatter from a SKILL.md file."""
+    """Extract YAML frontmatter from a SKILL.md file using real YAML parser.
+
+    Returns full frontmatter dict including inputs, outputs, triggers, etc.
+    """
     try:
         text = path.read_text()
         match = re.match(r"^---\s*\n(.*?)\n---", text, re.DOTALL)
         if not match:
             return None
-        # Simple YAML parser for key: value pairs
-        result = {}
-        for line in match.group(1).split("\n"):
-            line = line.strip()
-            if ":" in line:
-                key, _, value = line.partition(":")
-                key = key.strip()
-                value = value.strip().strip('"').strip("'")
-                result[key] = value
-        return result
+        return yaml.safe_load(match.group(1))
     except Exception:
         return None
 
@@ -53,6 +48,9 @@ def _discover_skills(base_dir: Path) -> list[dict]:
                     "name": meta.get("name", entry.name),
                     "description": meta.get("description", ""),
                     "location": str(entry),
+                    "inputs": meta.get("inputs", {}),
+                    "outputs": meta.get("outputs", {}),
+                    "triggers": meta.get("triggers", meta.get("trigger", [])),
                 })
         elif entry.suffix == ".md":
             meta = _parse_frontmatter(entry) or {}
@@ -60,6 +58,9 @@ def _discover_skills(base_dir: Path) -> list[dict]:
                 "name": meta.get("name", entry.stem),
                 "description": meta.get("description", ""),
                 "location": str(entry),
+                "inputs": meta.get("inputs", {}),
+                "outputs": meta.get("outputs", {}),
+                "triggers": meta.get("triggers", meta.get("trigger", [])),
             })
     return skills
 

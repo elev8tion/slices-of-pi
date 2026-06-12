@@ -163,6 +163,31 @@ async def stream_chat(
     db.increment_session_count(agent_id)
     db.record_activity(agent_id, "session_start", agent_name)
 
+    # ── Inject profile context into system prompt ────────────
+    from ..services.agent_profile_service import format_profile_as_prompt
+    from ..services.shared_memory_service import read_context
+
+    profile_context = format_profile_as_prompt(agent_id)
+
+    agent_tags_raw = agent.get("tags")
+    agent_tags = json.loads(agent_tags_raw) if isinstance(agent_tags_raw, str) else (agent_tags_raw or [])
+    shared_context = read_context(agent_tags) if agent_tags else ""
+
+    context_parts = []
+    if profile_context:
+        context_parts.append(profile_context)
+    if shared_context:
+        context_parts.append(shared_context)
+
+    if context_parts:
+        full_context = "\n\n".join(context_parts)
+        existing_prompt = agent.get("system_prompt") or ""
+        if existing_prompt:
+            agent["system_prompt"] = existing_prompt + "\n\n" + full_context
+        else:
+            agent["system_prompt"] = full_context
+        logger.info(f"Injected context ({len(full_context)} chars) for agent {agent_id[:12]}")
+
     # ── Build pi command ──────────────────────────────────────
     cmd = [PI_BINARY, "--mode", "json", "--session", str(session_file)]
     if agent.get("system_prompt"):
@@ -228,6 +253,13 @@ async def stream_chat(
         )
         db.update_agent_tokens(agent_id, total_tokens)
         db.update_agent_status(agent_id, "idle")
+
+        # ── Store session memory (only if actual work happened) ──
+        if turn_count > 0:
+            from ..services.agent_profile_service import extract_session_summary
+            session_note = extract_session_summary(agent_id, prompt, session_id)
+            db.append_agent_memory(agent_id, session_note, fact_type="dynamic")
+
         db.record_activity(
             agent_id, "session_end", agent_name,
             {"turns": turn_count, "tokens": total_tokens},

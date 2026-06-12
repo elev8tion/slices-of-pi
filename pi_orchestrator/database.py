@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS agents (
     system_prompt TEXT,
     git_repo TEXT,
     schedule_cron TEXT,
+    profile_json TEXT DEFAULT '{"static": {}, "dynamic": []}',
     status TEXT NOT NULL DEFAULT 'created',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL,
@@ -186,6 +187,32 @@ CREATE TABLE IF NOT EXISTS access_requests (
     status TEXT NOT NULL DEFAULT 'pending',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS connectors (
+    id TEXT PRIMARY KEY,
+    agent_id TEXT NOT NULL REFERENCES agents(id) ON DELETE CASCADE,
+    provider TEXT NOT NULL,
+    label TEXT NOT NULL,
+    auth_state TEXT NOT NULL,
+    container_tags TEXT NOT NULL DEFAULT '[]',
+    enabled INTEGER NOT NULL DEFAULT 1,
+    last_sync_at TEXT,
+    last_sync_status TEXT,
+    last_error TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS connector_sync_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    connector_id TEXT NOT NULL REFERENCES connectors(id) ON DELETE CASCADE,
+    status TEXT NOT NULL DEFAULT 'running',
+    items_found INTEGER DEFAULT 0,
+    items_imported INTEGER DEFAULT 0,
+    error_message TEXT,
+    started_at TEXT NOT NULL,
+    completed_at TEXT
+);
 """
 
 
@@ -225,7 +252,12 @@ def init_db() -> None:
     """Run schema migrations. Idempotent — safe to call at every startup."""
     conn = _get_conn()
     conn.executescript(SCHEMA)
-    conn.commit()
+    # Migrate: add profile_json column if missing
+    try:
+        conn.execute("ALTER TABLE agents ADD COLUMN profile_json TEXT")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
+    conn.commit()\
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -323,6 +355,58 @@ def delete_agent(agent_id: str) -> bool:
     cursor = conn.execute("DELETE FROM agents WHERE id = ?", (agent_id,))
     conn.commit()
     return cursor.rowcount > 0
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Agent Profiles
+# ═══════════════════════════════════════════════════════════════════
+
+
+def get_agent_profile(agent_id: str) -> dict:
+    """Get the profile JSON for an agent. Returns default if none set."""
+    conn = _get_conn()
+    row = conn.execute("SELECT profile_json FROM agents WHERE id = ?", (agent_id,)).fetchone()
+    if not row or not row["profile_json"]:
+        return {"static": {}, "dynamic": []}
+    try:
+        return json.loads(row["profile_json"])
+    except (json.JSONDecodeError, TypeError):
+        return {"static": {}, "dynamic": []}
+
+
+def update_agent_profile(agent_id: str, profile: dict) -> None:
+    """Replace the entire profile JSON for an agent."""
+    conn = _get_conn()
+    conn.execute(
+        "UPDATE agents SET profile_json = ?, updated_at = ? WHERE id = ?",
+        (json.dumps(profile), _now_iso(), agent_id)
+    )
+    conn.commit()
+
+
+def append_agent_memory(agent_id: str, fact: str, fact_type: str = "dynamic") -> None:
+    """Append a fact to an agent's dynamic memory.
+
+    Deduplicates: if the fact already exists (static or dynamic), skip it.
+    Caps dynamic array at 50 entries (oldest rotated out).
+    """
+    profile = get_agent_profile(agent_id)
+    static = profile.get("static", {})
+    dynamic = profile.get("dynamic", [])
+
+    if fact_type == "static":
+        key = fact.split(":")[0].strip() if ":" in fact else fact
+        static[key] = fact
+    else:
+        if fact in dynamic:
+            return
+        dynamic.append(fact)
+        if len(dynamic) > 50:
+            dynamic = dynamic[-50:]
+
+    profile["static"] = static
+    profile["dynamic"] = dynamic
+    update_agent_profile(agent_id, profile)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -613,6 +697,51 @@ def active_session_count() -> int:
     conn = _get_conn()
     row = conn.execute("SELECT COUNT(*) as cnt FROM sessions WHERE status = 'running'").fetchone()
     return row["cnt"]
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Connectors
+# ═══════════════════════════════════════════════════════════════════
+
+
+def list_connectors(enabled_only: bool = False) -> list[dict]:
+    conn = _get_conn()
+    if enabled_only:
+        rows = conn.execute("SELECT * FROM connectors WHERE enabled = 1 ORDER BY created_at DESC").fetchall()
+    else:
+        rows = conn.execute("SELECT * FROM connectors ORDER BY created_at DESC").fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_connector(connector_id: str) -> Optional[dict]:
+    conn = _get_conn()
+    row = conn.execute("SELECT * FROM connectors WHERE id = ?", (connector_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def create_connector(
+    agent_id: str, provider: str, label: str,
+    auth_state: dict, container_tags: list[str] | None = None,
+) -> dict:
+    conn = _get_conn()
+    connector_id = _new_id()
+    now = _now_iso()
+    conn.execute(
+        """INSERT INTO connectors (id, agent_id, provider, label, auth_state,
+           container_tags, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (connector_id, agent_id, provider, label, json.dumps(auth_state),
+         json.dumps(container_tags or []), now, now)
+    )
+    conn.commit()
+    return get_connector(connector_id)
+
+
+def delete_connector(connector_id: str) -> bool:
+    conn = _get_conn()
+    cursor = conn.execute("DELETE FROM connectors WHERE id = ?", (connector_id,))
+    conn.commit()
+    return cursor.rowcount > 0
 
 
 # ═══════════════════════════════════════════════════════════════════

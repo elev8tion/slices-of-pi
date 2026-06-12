@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -192,6 +192,24 @@ class SkillSummary(BaseModel):
     name: str
     description: str
     location: str
+
+
+class SkillParameter(BaseModel):
+    """A parameter for a slice play skill."""
+    type: str = "string"
+    required: bool = False
+    default: Any = None
+    description: str = ""
+
+
+class SkillSchema(BaseModel):
+    """Full skill schema including typed inputs/outputs."""
+    name: str
+    description: str = ""
+    location: str = ""
+    inputs: dict[str, SkillParameter] = Field(default_factory=dict)
+    outputs: dict[str, SkillParameter] = Field(default_factory=dict)
+    triggers: list[str] = Field(default_factory=list)
 
 
 class ExtensionSummary(BaseModel):

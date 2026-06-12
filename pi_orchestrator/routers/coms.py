@@ -47,6 +47,29 @@ def _discover_peers() -> list[dict]:
                     "project": project_dir.name,
                     "status": "error",
                 })
+
+        # Add recent facts from the shared knowledge pool
+        try:
+            from ..services.shared_memory_service import SHARED_MEMORY_DIR
+            peer_facts = []
+            tag_path = SHARED_MEMORY_DIR / project_dir.name / "knowledge.jsonl"
+            if tag_path.exists():
+                with open(tag_path) as f:
+                    for line in f:
+                        try:
+                            entry = json.loads(line)
+                            if entry.get("agent_id", "") == agent_file.stem or entry.get("agent_name") == agent_file.stem:
+                                peer_facts.append(entry.get("fact", ""))
+                                if len(peer_facts) >= 5:
+                                    break
+                        except (json.JSONDecodeError, ValueError):
+                            continue
+            peers[-1]["recent_facts"] = peer_facts
+            peers[-1]["fact_count"] = len(peer_facts)
+        except Exception:
+            peers[-1]["recent_facts"] = []
+            peers[-1]["fact_count"] = 0
+
     return peers
 
 

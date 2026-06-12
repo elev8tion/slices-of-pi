@@ -49,6 +49,7 @@ from .routers.extensions import router as extensions_router
 from .routers.schedules import router as schedules_router
 from .routers.templates import router as templates_router
 from .routers.coms import router as coms_router
+from .routers.connectors import router as connectors_router
 from .routers.teams import router as teams_router
 from .routers.system import router as system_router
 from .routers.terminal import router as terminal_router
@@ -165,6 +166,7 @@ app.include_router(extensions_router)
 app.include_router(schedules_router)
 app.include_router(templates_router)
 app.include_router(coms_router)
+app.include_router(connectors_router)
 app.include_router(teams_router)
 app.include_router(system_router)
 app.include_router(terminal_router)
