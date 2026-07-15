@@ -1,0 +1,28 @@
+INFO:     Started server process [5929]
+INFO:     Waiting for application startup.
+2026-07-15 01:49:27  INFO      pi_orchestrator.main  Pi binary found: /Users/kc/.nvm/versions/node/v22.22.2/bin/pi
+2026-07-15 01:49:27  INFO      pi_orchestrator.services.event_bus  Event bus started (in-process)
+2026-07-15 01:49:27  INFO      pi_orchestrator.main  Event bus started (in-process)
+2026-07-15 01:49:27  INFO      pi_orchestrator.services.connectors.engine  Sync engine started (interval=60s)
+2026-07-15 01:49:27  INFO      pi_orchestrator.main  Sync engine started
+2026-07-15 01:49:27  INFO      apscheduler.scheduler  Scheduler started
+2026-07-15 01:49:27  INFO      pi_orchestrator.services.schedule_service  Scheduler started
+2026-07-15 01:49:27  INFO      pi_orchestrator.main  Scheduler started
+2026-07-15 01:49:27  INFO      pi_orchestrator.services.cleanup_service  Cleanup service scheduled (interval=21600s, retention=7d, stagger=300s)
+2026-07-15 01:49:27  INFO      pi_orchestrator.main  Cleanup service started
+2026-07-15 01:49:27  INFO      pi_orchestrator.main  Pi Orchestrator starting on 127.0.0.1:8420
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8420 (Press CTRL+C to quit)
+2026-07-15 01:49:28  INFO      pi_orchestrator.services.pi_session_service  Starting pi session DV2UqdRHtfON...: pi --mode json --session /Users/kc/.pi/agent/sessions/managed/health-probe-agent/DV2UqdRHtfONNP2KdxJCyg.jsonl --tools...
+2026-07-15 01:49:31  WARNING   pi_orchestrator.services.pi_session_service  pi stderr [DV2UqdRHtfON]: [dashboard] sendFlowsList: 0 flows, sessionId=019f6452
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+2026-07-15 01:50:14  INFO      pi_orchestrator.main  Pi Orchestrator shutting down...
+2026-07-15 01:50:14  INFO      pi_orchestrator.services.connectors.engine  Sync engine stopped
+2026-07-15 01:50:14  INFO      pi_orchestrator.services.schedule_service  Scheduler stopped
+2026-07-15 01:50:14  INFO      apscheduler.scheduler  Scheduler has been shut down
+2026-07-15 01:50:14  INFO      pi_orchestrator.services.cleanup_service  Cleanup service stopped
+2026-07-15 01:50:14  INFO      pi_orchestrator.services.event_bus  Event bus stopped
+2026-07-15 01:50:14  INFO      pi_orchestrator.main  Pi Orchestrator stopped
+INFO:     Application shutdown complete.
+INFO:     Finished server process [5929]

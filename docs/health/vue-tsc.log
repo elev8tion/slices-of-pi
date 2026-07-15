@@ -1,0 +1,10 @@
+src/components/chat/ChatHistoryDropdown.vue(114,9): error TS2551: Property 'select' does not exist on type 'HTMLElement'. Did you mean 'onselect'?
+src/components/UserMenu.vue(160,12): error TS2339: Property '_clickOutside' does not exist on type 'HTMLElement'.
+src/components/UserMenu.vue(165,47): error TS2339: Property '_clickOutside' does not exist on type 'HTMLElement'.
+src/components/UserMenu.vue(168,50): error TS2339: Property '_clickOutside' does not exist on type 'HTMLElement'.
+src/components/VoiceWorkspace.vue(30,18): error TS2304: Cannot find name 'SpeechRecognition'.
+src/components/VoiceWorkspace.vue(108,34): error TS2552: Cannot find name 'SpeechRecognitionEvent'. Did you mean 'SpeechRecognitionResult'?
+src/stores/notifications.ts(24,7): error TS7053: Element implicitly has an 'any' type because expression of type '"error" | "warning"' can't be used to index type '{ _add: any; info(msg: string): void; success(msg: string): void; error(msg: string): void; }'.
+  Property 'warning' does not exist on type '{ _add: any; info(msg: string): void; success(msg: string): void; error(msg: string): void; }'.
+src/views/AuditLog.vue(202,63): error TS2345: Argument of type 'number' is not assignable to parameter of type 'string'.
+src/views/AuditLog.vue(203,48): error TS2339: Property 'replace' does not exist on type 'number'.
