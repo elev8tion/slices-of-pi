@@ -152,15 +152,7 @@ function closeDetail() { selectedAgent.value = null }
   text-decoration: none;
   transition: all 0.4s cubic-bezier(0.32,0.72,0,1);
 }
-.btn-secondary {
-  background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.06);
-  color: rgba(255,255,255,0.6);
-}
-.btn-secondary:hover {
-  background: rgba(255,255,255,0.07);
-  color: #fff;
-}
+
 
 .fade-up { opacity: 0; transform: translateY(16px); animation: fadeUp 0.7s cubic-bezier(0.32,0.72,0,1) forwards; }
 .fade-up-d2 { animation-delay: 0.05s; }

@@ -68,7 +68,7 @@ function onFileChange(e: Event) {
       <!-- Send button -->
       <button
         :disabled="!input.trim() || disabled"
-        class="w-7 h-7 rounded-full bg-accent flex items-center justify-center text-white text-xs disabled:opacity-30 transition-opacity shrink-0"
+        class="w-7 h-7 rounded-full bg-accent flex items-center justify-center text-void text-xs disabled:opacity-30 transition-opacity shrink-0"
         @click="handleSend"
       >↑</button>
     </div>

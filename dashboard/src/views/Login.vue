@@ -104,14 +104,14 @@ function toggleMode() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #08080C;
+  background: #0A0A0A;
   padding: 24px;
 }
 
 .login-card {
   width: 100%;
   max-width: 400px;
-  background: #0C0C10;
+  background: #0A0A0A;
   border: 1px solid rgba(255,255,255,0.06);
   border-radius: 24px;
   padding: 40px 32px;
@@ -183,7 +183,7 @@ function toggleMode() {
 .login-btn {
   margin-top: 8px;
   background: #9DD522;
-  color: #fff;
+  color: #0A0A0A;
   border: none;
   border-radius: 12px;
   padding: 12px;

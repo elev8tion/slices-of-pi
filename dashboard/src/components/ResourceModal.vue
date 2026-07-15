@@ -443,18 +443,5 @@ function handleClose() {
   border-top: 1px solid rgba(255,255,255,0.05);
   background: rgba(255,255,255,0.02);
 }
-.btn-primary {
-  background: #9DD522; color: #fff; border: none; border-radius: 12px;
-  font-size: 12.5px; font-weight: 500; font-family: inherit; cursor: pointer;
-  padding: 10px 20px; transition: all 0.3s ease;
-  box-shadow: 0 2px 12px rgba(157,213,34,0.25);
-}
-.btn-primary:hover { background: #8BC01E; }
-.btn-secondary {
-  background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.5);
-  border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
-  font-size: 12.5px; font-weight: 500; font-family: inherit; cursor: pointer;
-  padding: 10px 20px; transition: all 0.3s ease;
-}
-.btn-secondary:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); }
+
 </style>

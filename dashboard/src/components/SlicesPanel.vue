@@ -184,7 +184,7 @@ async function toggleScheduler() {
             <div v-else class="flex items-center gap-2 p-2 rounded-btn bg-amber-500/10 border border-amber-500/20">
               <span class="text-[11px] text-amber-400/80">Stop all sessions?</span>
               <button @click="stopAll" :disabled="actionLoading === 'stop'"
-                class="text-[10px] font-semibold px-2 py-1 rounded bg-amber-500 text-white hover:bg-amber-600 transition-all">Yes</button>
+                class="text-[10px] font-semibold px-2 py-1 rounded bg-warning text-white hover:bg-warning/80 transition-all">Yes</button>
               <button @click="showConfirm = null"
                 class="text-[10px] px-2 py-1 rounded bg-white/5 text-text-tertiary hover:text-text-secondary transition-all">No</button>
             </div>
@@ -204,7 +204,7 @@ async function toggleScheduler() {
             <div v-else class="flex items-center gap-2 p-2 rounded-btn bg-accent/10 border border-accent/20">
               <span class="text-[11px] text-accent/80">Restart all agents?</span>
               <button @click="restartAll" :disabled="actionLoading === 'restart'"
-                class="text-[10px] font-semibold px-2 py-1 rounded bg-accent text-white hover:bg-accent-hover transition-all">Yes</button>
+                class="text-[10px] font-semibold px-2 py-1 rounded bg-accent text-void hover:bg-accent-hover transition-all">Yes</button>
               <button @click="showConfirm = null"
                 class="text-[10px] px-2 py-1 rounded bg-white/5 text-text-tertiary hover:text-text-secondary transition-all">No</button>
             </div>
@@ -224,7 +224,7 @@ async function toggleScheduler() {
             <div v-else class="flex items-center gap-2 p-2 rounded-btn bg-danger/10 border border-danger/20">
               <span class="text-[11px] text-danger/80">Force-stop all pi processes?</span>
               <button @click="emergencyStop" :disabled="actionLoading === 'emergency'"
-                class="text-[10px] font-semibold px-2 py-1 rounded bg-danger text-white hover:bg-red-700 transition-all">Yes</button>
+                class="text-[10px] font-semibold px-2 py-1 rounded bg-danger text-white hover:bg-danger/80 transition-all">Yes</button>
               <button @click="showConfirm = null"
                 class="text-[10px] px-2 py-1 rounded bg-white/5 text-text-tertiary hover:text-text-secondary transition-all">No</button>
             </div>

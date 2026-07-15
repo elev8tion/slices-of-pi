@@ -488,20 +488,7 @@ function onTabClick(tab: string) {
   resize: vertical;
   min-height: 60px;
 }
-.btn-primary {
-  background: #9DD522; color: #fff; border: none; border-radius: 12px;
-  font-size: 12.5px; font-weight: 500; font-family: inherit; cursor: pointer;
-  padding: 10px 20px; transition: all 0.3s ease;
-  box-shadow: 0 2px 12px rgba(157,213,34,0.25);
-}
-.btn-primary:hover:not(:disabled) { background: #8BC01E; }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-secondary {
-  background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.5); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
-  font-size: 12.5px; font-weight: 500; font-family: inherit; cursor: pointer;
-  padding: 10px 20px; transition: all 0.3s ease;
-}
-.btn-secondary:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); }
+
 .skills-grid {
   display: flex;
   flex-wrap: wrap;

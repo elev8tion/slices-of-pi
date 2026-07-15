@@ -196,7 +196,7 @@ onUnmounted(() => {
       <div class="git-empty-sub">Initialize a git repo to version-control this agent's configs.</div>
 
       <div v-if="!showInitForm" class="mt-4">
-        <button class="btn-accent" @click="showInitForm = true">Initialize Repo</button>
+        <button class="btn-primary" @click="showInitForm = true">Initialize Repo</button>
       </div>
 
       <form v-else @submit.prevent="initRepo" class="git-init-form mt-4">
@@ -208,7 +208,7 @@ onUnmounted(() => {
           :disabled="initLoading"
         />
         <div class="flex gap-2 mt-2 justify-center">
-          <button type="submit" class="btn-accent" :disabled="initLoading">
+          <button type="submit" class="btn-primary" :disabled="initLoading">
             {{ initLoading ? 'Initializing...' : 'Initialize' }}
           </button>
           <button type="button" class="btn-ghost" @click="showInitForm = false">Cancel</button>
@@ -539,24 +539,7 @@ onUnmounted(() => {
   padding: 8px;
   margin: 0;
 }
-.btn-accent {
-  background: #9DD522;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 18px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.btn-accent:hover:not(:disabled) {
-  background: #8BC01E;
-}
-.btn-accent:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+
 .btn-ghost {
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.08);

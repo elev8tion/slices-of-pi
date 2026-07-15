@@ -299,7 +299,7 @@ function timeAgo(iso: string): string {
 }
 .share-btn {
   background: #9DD522;
-  color: #fff;
+  color: #0A0A0A;
   border: none;
   border-radius: 8px;
   padding: 7px 14px;

@@ -420,8 +420,8 @@ onUnmounted(() => {
 }
 .queue-btn-danger:hover { background: rgba(239,68,68,0.2); }
 .queue-btn-secondary {
-  background: rgba(255,255,255,0.04);
-  color: rgba(255,255,255,0.4);
+  background: rgba(233,236,224,0.04);
+  color: rgba(233,236,224,0.4);
 }
-.queue-btn-secondary:hover { background: rgba(255,255,255,0.07); }
+.queue-btn-secondary:hover { background: rgba(233,236,224,0.07); }
 </style>

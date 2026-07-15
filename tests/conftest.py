@@ -300,6 +300,25 @@ def _build_test_app() -> FastAPI:
     from pi_orchestrator.routers.teams import router as teams_router
     from pi_orchestrator.routers.profile import router as profile_router
     from pi_orchestrator.routers.connectors import router as connectors_router
+    from pi_orchestrator.routers.system import router as system_router
+    from pi_orchestrator.routers.terminal import router as terminal_router
+    from pi_orchestrator.routers.console import router as console_router
+    from pi_orchestrator.routers.tags import router as tags_router
+    from pi_orchestrator.routers.telemetry import router as telemetry_router
+    from pi_orchestrator.routers.credentials import router as credentials_router
+    from pi_orchestrator.routers.operator_queue import router as operator_queue_router
+    from pi_orchestrator.routers.files import router as files_router
+    from pi_orchestrator.routers.git import router as git_router
+    from pi_orchestrator.routers.voice import router as voice_router
+    from pi_orchestrator.routers.settings_router import router as settings_router
+    from pi_orchestrator.routers.auth import router as auth_router
+    from pi_orchestrator.routers.sharing import router as sharing_router
+    from pi_orchestrator.routers.users import router as users_router
+    from pi_orchestrator.routers.ws_tickets import router as ws_tickets_router
+    from pi_orchestrator.routers.audit_log import router as audit_log_router
+    from pi_orchestrator.routers.flixz import router as flixz_router
+    from pi_orchestrator.routers.ops import router as ops_router
+    from pi_orchestrator.routers.mcp_keys import router as mcp_keys_router
 
     app.include_router(events_router)
     app.include_router(agents_router)
@@ -314,6 +333,25 @@ def _build_test_app() -> FastAPI:
     app.include_router(profile_router)
     app.include_router(connectors_router)
     app.include_router(teams_router)
+    app.include_router(system_router)
+    app.include_router(terminal_router)
+    app.include_router(console_router)
+    app.include_router(tags_router)
+    app.include_router(telemetry_router)
+    app.include_router(credentials_router)
+    app.include_router(operator_queue_router)
+    app.include_router(files_router)
+    app.include_router(git_router)
+    app.include_router(voice_router)
+    app.include_router(settings_router)
+    app.include_router(auth_router)
+    app.include_router(sharing_router)
+    app.include_router(users_router)
+    app.include_router(ws_tickets_router)
+    app.include_router(audit_log_router)
+    app.include_router(flixz_router)
+    app.include_router(ops_router)
+    app.include_router(mcp_keys_router)
 
     # Health endpoint
     @app.get("/health")

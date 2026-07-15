@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from fastapi import APIRouter, HTTPException, Query
 
 from .. import database as db
+from ..services.audit_service import log_queue_resolved
 
 logger = logging.getLogger(__name__)
 
@@ -113,11 +114,11 @@ async def push_queue_item(body: PushQueueItemRequest):
     item_id = _new_id()
     now = _now_iso()
     conn.execute(
-        """INSERT INTO operator_queue (id, agent_id, agent_name, type, title, description,
-           status, priority, created_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?)""",
-        (item_id, body.agent_id, body.agent_name, body.type, body.title, body.description, body.priority, now),
+        """INSERT INTO operator_queue (id, agent_id, agent_name, item_type, type, title, description,
+           status, priority, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?)""",
+        (item_id, body.agent_id, body.agent_name, body.type, body.type, body.title, body.description, body.priority, now),
     )
-    db._safe_commit(conn)
+    conn.commit()
     row = conn.execute("SELECT * FROM operator_queue WHERE id = ?", (item_id,)).fetchone()
     return _row_to_dict(row)
 
@@ -148,7 +149,7 @@ async def update_queue_item(item_id: str, body: UpdateQueueItemRequest):
             "UPDATE operator_queue SET status = ?, updated_at = ? WHERE id = ?",
             (body.status, now, item_id),
         )
-    db._safe_commit(conn)
+    conn.commit()
     row = conn.execute("SELECT * FROM operator_queue WHERE id = ?", (item_id,)).fetchone()
     # Audit log for resolution
     if body.status in ("resolved", "rejected"):
@@ -161,7 +162,7 @@ async def delete_queue_item(item_id: str):
     """Remove a queue item."""
     conn = db._get_conn()
     cursor = conn.execute("DELETE FROM operator_queue WHERE id = ?", (item_id,))
-    db._safe_commit(conn)
+    conn.commit()
     if cursor.rowcount == 0:
         raise HTTPException(status_code=404, detail="Queue item not found")
     return {"status": "deleted"}

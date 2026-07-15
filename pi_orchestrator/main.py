@@ -69,6 +69,7 @@ from .routers.sharing import router as sharing_router
 from .routers.users import router as users_router
 from .routers.ws_tickets import router as ws_tickets_router
 from .routers.audit_log import router as audit_log_router
+from .routers.flixz import router as flixz_router
 from .routers.ops import router as ops_router
 from .routers.mcp_keys import router as mcp_keys_router
 
@@ -191,6 +192,7 @@ app.include_router(sharing_router)
 app.include_router(users_router)
 app.include_router(ws_tickets_router)
 app.include_router(audit_log_router)
+app.include_router(flixz_router)
 app.include_router(ops_router)
 app.include_router(mcp_keys_router)
 

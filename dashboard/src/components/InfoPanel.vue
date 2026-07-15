@@ -8,7 +8,12 @@ const agent = ref<any>(null)
 const loading = ref(true)
 const error = ref(false)
 
-async function load() {
+// Profile data (reactive, no DOM manipulation)
+const profileStaticCount = ref<number | string>('—')
+const profileDynamicCount = ref<number | string>('—')
+const profilePreview = ref('Loading profile...')
+
+async function loadAgent() {
   loading.value = true
   error.value = false
   try {
@@ -23,7 +28,27 @@ async function load() {
   }
 }
 
-onMounted(load)
+async function loadProfile() {
+  try {
+    const res = await fetch(`/api/agents/${props.agentId}/profile`)
+    if (!res.ok) return
+    const data = await res.json()
+    profileStaticCount.value = data.static_count ?? 0
+    profileDynamicCount.value = data.dynamic_count ?? 0
+    if (data.preview) {
+      profilePreview.value = data.preview
+    } else {
+      profilePreview.value = 'No profile data yet. Start a session to build memory.'
+    }
+  } catch {
+    profilePreview.value = 'Failed to load profile.'
+  }
+}
+
+onMounted(() => {
+  loadAgent()
+  loadProfile()
+})
 </script>
 
 <template>
@@ -42,7 +67,7 @@ onMounted(load)
     <div v-else-if="error" class="text-center py-8">
       <div class="text-2xl mb-2 opacity-30">⚠</div>
       <div class="text-sm text-text-tertiary mb-3">Failed to load agent info</div>
-      <button class="btn-retry" @click="load">Retry</button>
+      <button class="btn-retry" @click="loadAgent">Retry</button>
     </div>
 
     <!-- Info content -->
@@ -165,51 +190,19 @@ onMounted(load)
         <div class="info-grid">
           <div class="info-field">
             <span class="info-key">Static Facts</span>
-            <span class="info-val" id="profile-static-count">—</span>
+            <span class="info-val">{{ profileStaticCount }}</span>
           </div>
           <div class="info-field">
             <span class="info-key">Dynamic Memories</span>
-            <span class="info-val" id="profile-dynamic-count">—</span>
+            <span class="info-val">{{ profileDynamicCount }}</span>
           </div>
         </div>
-        <div id="profile-preview" class="mt-2 p-3 rounded-xl bg-white/[0.02] border border-white/6 text-[10px] text-text-tertiary font-mono leading-relaxed max-h-[160px] overflow-y-auto whitespace-pre-wrap">
-          Loading profile...
-        </div>
+        <div class="profile-preview-box">{{ profilePreview }}</div>
       </section>
 
     </template>
   </div>
 </template>
-
-<script>
-import { onMounted } from 'vue'
-
-export default {
-  props: ['agentId'],
-  setup(props) {
-    onMounted(async () => {
-      try {
-        const res = await fetch(`/api/agents/${props.agentId}/profile`)
-        if (!res.ok) return
-        const data = await res.json()
-        const staticEl = document.getElementById('profile-static-count')
-        const dynamicEl = document.getElementById('profile-dynamic-count')
-        const previewEl = document.getElementById('profile-preview')
-        if (staticEl) staticEl.textContent = data.static_count ?? 0
-        if (dynamicEl) dynamicEl.textContent = data.dynamic_count ?? 0
-        if (previewEl) {
-          if (data.preview) {
-            previewEl.textContent = data.preview
-          } else {
-            previewEl.textContent = 'No profile data yet. Start a session to build memory.'
-          }
-        }
-      } catch {}
-    })
-    return {}
-  }
-}
-</script>
 
 <style scoped>
 .info-panel {
@@ -280,6 +273,21 @@ export default {
   background: rgba(168,85,247,0.08);
   border: 1px solid rgba(168,85,247,0.15);
   color: rgba(192,132,252,0.7);
+}
+
+.profile-preview-box {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.06);
+  font-size: 10px;
+  color: rgba(255,255,255,0.3);
+  font-family: 'JetBrains Mono', Menlo, 'Courier New', monospace;
+  line-height: 1.6;
+  max-height: 160px;
+  overflow-y: auto;
+  white-space: pre-wrap;
 }
 
 /* Skeleton */

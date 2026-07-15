@@ -12,7 +12,7 @@ PYTHON="${PYTHON:-python3}"
 
 # ── Python dependencies ─────────────────────────────────────────
 echo "→ Installing Python dependencies..."
-$PYTHON -m pip install fastapi uvicorn pydantic apscheduler pyyaml -q 2>/dev/null || true
+$PYTHON -m pip install fastapi uvicorn pydantic apscheduler pyyaml cryptography aiohttp -q 2>/dev/null || true
 
 # ── Dashboard build ──────────────────────────────────────────────
 echo "→ Building dashboard..."

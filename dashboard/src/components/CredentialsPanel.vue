@@ -172,7 +172,7 @@ const knownTypes = [
       </div>
       <div class="flex gap-2">
         <button
-          class="flex-1 text-[11px] font-semibold py-2 rounded-lg bg-accent text-white hover:bg-accent/90 transition-colors disabled:opacity-40"
+          class="flex-1 text-[11px] font-semibold py-2 rounded-lg bg-accent text-void hover:bg-accent/90 transition-colors disabled:opacity-40"
           :disabled="saving || !newName.trim() || !newValue.trim()"
           @click="saveCredential"
         >

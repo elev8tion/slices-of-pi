@@ -251,6 +251,23 @@ CREATE TABLE IF NOT EXISTS connector_sync_log (
     started_at TEXT NOT NULL,
     completed_at TEXT
 );
+
+CREATE TABLE IF NOT EXISTS flixz_runs (
+    id TEXT PRIMARY KEY,
+    agent_id TEXT,
+    video_path TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'running',
+    config TEXT NOT NULL,
+    output_dir TEXT,
+    frame_count INTEGER DEFAULT 0,
+    duration_seconds REAL,
+    resolution TEXT,
+    transcript_text TEXT,
+    sink_results TEXT,
+    error_message TEXT,
+    started_at TEXT NOT NULL,
+    completed_at TEXT
+);
 """
 
 
@@ -286,20 +303,51 @@ def _new_id() -> str:
 # ═══════════════════════════════════════════════════════════════════
 
 
+def _safe_add_column(conn: sqlite3.Connection, table: str, col: str, col_def: str) -> bool:
+    """Add a column if it doesn't already exist."""
+    try:
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_def}")
+        return True
+    except sqlite3.OperationalError:
+        return False  # Column already exists
+
+
 def init_db() -> None:
     """Run schema migrations. Idempotent — safe to call at every startup."""
     conn = _get_conn()
     conn.executescript(SCHEMA)
-    # Migrate: add profile_json column if missing
-    try:
-        conn.execute("ALTER TABLE agents ADD COLUMN profile_json TEXT")
-    except sqlite3.OperationalError:
-        pass  # Column already exists
-    # Migrate: add tags column if missing
-    try:
-        conn.execute("ALTER TABLE agents ADD COLUMN tags TEXT DEFAULT '[]'")
-    except sqlite3.OperationalError:
-        pass  # Column already exists
+
+    # ── Migrations: agents table ────────────────────────────────
+    _safe_add_column(conn, "agents", "profile_json", "TEXT")
+    _safe_add_column(conn, "agents", "tags", "TEXT DEFAULT '[]'")
+
+    # ── Migrations: audit_log table ────────────────────────────
+    _safe_add_column(conn, "audit_log", "event_type", "TEXT")
+    _safe_add_column(conn, "audit_log", "agent_name", "TEXT")
+    _safe_add_column(conn, "audit_log", "username", "TEXT")
+    _safe_add_column(conn, "audit_log", "metadata", "TEXT")
+
+    # ── Migrations: operator_queue table ───────────────────────
+    _safe_add_column(conn, "operator_queue", "type", "TEXT")
+    _safe_add_column(conn, "operator_queue", "title", "TEXT")
+    _safe_add_column(conn, "operator_queue", "description", "TEXT")
+    _safe_add_column(conn, "operator_queue", "updated_at", "TEXT")
+    _safe_add_column(conn, "operator_queue", "resolution_note", "TEXT")
+    _safe_add_column(conn, "operator_queue", "priority", "TEXT DEFAULT 'normal'")
+
+    # ── Migrations: access_requests table ───────────────────────
+    _safe_add_column(conn, "access_requests", "agent_id", "TEXT")
+    _safe_add_column(conn, "access_requests", "requester_email", "TEXT")
+    _safe_add_column(conn, "access_requests", "message", "TEXT")
+    _safe_add_column(conn, "access_requests", "resolved_at", "TEXT")
+    _safe_add_column(conn, "access_requests", "resolved_by", "TEXT")
+
+    # ── Migrations: agent_shares table ─────────────────────────
+    _safe_add_column(conn, "agent_shares", "shared_at", "TEXT")
+
+    # ── Migrations: mcp_keys table ─────────────────────────────
+    _safe_add_column(conn, "mcp_keys", "value", "TEXT")
+
     conn.commit()\
 
 
@@ -835,6 +883,392 @@ def create_connector(
 def delete_connector(connector_id: str) -> bool:
     conn = _get_conn()
     cursor = conn.execute("DELETE FROM connectors WHERE id = ?", (connector_id,))
+    conn.commit()
+    return cursor.rowcount > 0
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Audit Log
+# ═══════════════════════════════════════════════════════════════════
+
+
+def log_audit_event(
+    event_type: str,
+    agent_id: Optional[str] = None,
+    agent_name: Optional[str] = None,
+    user_id: Optional[str] = None,
+    username: Optional[str] = None,
+    metadata: Optional[dict] = None,
+) -> str:
+    """Insert an audit log event. Returns the new row id."""
+    conn = _get_conn()
+    # Store in both old (action) and new (event_type) columns for
+    # backward compatibility with existing databases.
+    cursor = conn.execute(
+        """INSERT INTO audit_log (event_type, action, agent_id, agent_name, user_id,
+           username, metadata, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            event_type, event_type, agent_id, agent_name, user_id, username,
+            json.dumps(metadata) if metadata else None,
+            _now_iso(),
+        ),
+    )
+    conn.commit()
+    return str(cursor.lastrowid)
+
+
+def query_audit_events(
+    event_type: Optional[str] = None,
+    agent_id: Optional[str] = None,
+    user_id: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[dict]:
+    """Query audit events with optional filters. Paginated."""
+    conn = _get_conn()
+    where = []
+    params: list = []
+    if event_type:
+        where.append("event_type = ?")
+        params.append(event_type)
+    if agent_id:
+        where.append("agent_id = ?")
+        params.append(agent_id)
+    if user_id:
+        where.append("user_id = ?")
+        params.append(user_id)
+    if date_from:
+        where.append("created_at >= ?")
+        params.append(date_from)
+    if date_to:
+        where.append("created_at <= ?")
+        params.append(date_to)
+    sql = "SELECT * FROM audit_log"
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    sql += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+    params.extend([limit, offset])
+    rows = conn.execute(sql, params).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_total_audit_event_count(
+    event_type: Optional[str] = None,
+    agent_id: Optional[str] = None,
+    user_id: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+) -> int:
+    """Count audit events matching filters."""
+    conn = _get_conn()
+    where = []
+    params: list = []
+    if event_type:
+        where.append("event_type = ?")
+        params.append(event_type)
+    if agent_id:
+        where.append("agent_id = ?")
+        params.append(agent_id)
+    if user_id:
+        where.append("user_id = ?")
+        params.append(user_id)
+    if date_from:
+        where.append("created_at >= ?")
+        params.append(date_from)
+    if date_to:
+        where.append("created_at <= ?")
+        params.append(date_to)
+    sql = "SELECT COUNT(*) as cnt FROM audit_log"
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    row = conn.execute(sql, params).fetchone()
+    return row["cnt"]
+
+
+def get_audit_event_stats() -> dict:
+    """Get event counts by type for the last 30 days."""
+    conn = _get_conn()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    rows = conn.execute(
+        "SELECT event_type, COUNT(*) as cnt FROM audit_log WHERE created_at >= ? GROUP BY event_type ORDER BY cnt DESC",
+        (cutoff,),
+    ).fetchall()
+    return {r["event_type"]: r["cnt"] for r in rows}
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Agent Sharing
+# ═══════════════════════════════════════════════════════════════════
+
+
+def list_shares(agent_id: str) -> list[dict]:
+    """List all users who have access to an agent, with user details."""
+    conn = _get_conn()
+    rows = conn.execute(
+        """SELECT s.agent_id, s.user_id, s.permission,
+                  s.created_at AS shared_at,
+                  COALESCE(u.username, 'unknown') AS username,
+                  COALESCE(u.email, '') AS email,
+                  COALESCE(u.role, 'user') AS user_role
+           FROM agent_shares s
+           LEFT JOIN users u ON s.user_id = u.id
+           WHERE s.agent_id = ?
+           ORDER BY s.created_at DESC""",
+        (agent_id,),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def share_agent(agent_id: str, user_id: str, permission: str = "chat") -> dict:
+    """Grant a user access to an agent."""
+    conn = _get_conn()
+    now = _now_iso()
+    # Avoid duplicates
+    existing = conn.execute(
+        "SELECT id FROM agent_shares WHERE agent_id = ? AND user_id = ?",
+        (agent_id, user_id),
+    ).fetchone()
+    if existing:
+        conn.execute(
+            "UPDATE agent_shares SET permission = ?, shared_at = ? WHERE agent_id = ? AND user_id = ?",
+            (permission, now, agent_id, user_id),
+        )
+    else:
+        conn.execute(
+            "INSERT INTO agent_shares (agent_id, user_id, permission, shared_at) VALUES (?, ?, ?, ?)",
+            (agent_id, user_id, permission, now),
+        )
+    conn.commit()
+    return {"agent_id": agent_id, "user_id": user_id, "permission": permission}
+
+
+def unshare_agent(agent_id: str, user_id: str) -> bool:
+    """Revoke a user's access to an agent."""
+    conn = _get_conn()
+    cursor = conn.execute(
+        "DELETE FROM agent_shares WHERE agent_id = ? AND user_id = ?",
+        (agent_id, user_id),
+    )
+    conn.commit()
+    return cursor.rowcount > 0
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Access Requests
+# ═══════════════════════════════════════════════════════════════════
+
+
+def list_access_requests(agent_id: str, status: Optional[str] = None) -> list[dict]:
+    """List access requests for an agent, optionally filtered by status."""
+    conn = _get_conn()
+    if status:
+        rows = conn.execute(
+            "SELECT * FROM access_requests WHERE agent_id = ? AND status = ? ORDER BY created_at DESC",
+            (agent_id, status),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM access_requests WHERE agent_id = ? ORDER BY created_at DESC",
+            (agent_id,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def create_access_request(
+    agent_id: str, email: str, message: Optional[str] = None
+) -> dict:
+    """Create a new access request for an agent."""
+    conn = _get_conn()
+    req_id = _new_id()
+    conn.execute(
+        """INSERT INTO access_requests (id, agent_id, requester_email, email,
+           message, status, created_at)
+           VALUES (?, ?, ?, ?, ?, 'pending', ?)""",
+        (req_id, agent_id, email, email, message, _now_iso()),
+    )
+    conn.commit()
+    return get_access_request(req_id)
+
+
+def get_access_request(req_id: str) -> Optional[dict]:
+    """Get a single access request."""
+    conn = _get_conn()
+    row = conn.execute(
+        "SELECT * FROM access_requests WHERE id = ?", (req_id,),
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def resolve_access_request(
+    req_id: str, status: str, resolved_by: str
+) -> None:
+    """Approve or reject an access request."""
+    conn = _get_conn()
+    now = _now_iso()
+    conn.execute(
+        "UPDATE access_requests SET status = ?, resolved_at = ?, resolved_by = ? WHERE id = ?",
+        (status, now, resolved_by, req_id),
+    )
+    conn.commit()
+
+
+# ═══════════════════════════════════════════════════════════════════
+# MCP Keys
+# ═══════════════════════════════════════════════════════════════════
+
+
+def list_mcp_keys() -> list[dict]:
+    """List all MCP keys."""
+    conn = _get_conn()
+    rows = conn.execute(
+        "SELECT id, name, value, created_at FROM mcp_keys ORDER BY created_at DESC"
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def create_mcp_key(key_id: str, name: str, encrypted_value: str) -> bool:
+    """Create a new MCP key. Returns True on success, False on name conflict."""
+    conn = _get_conn()
+    # Check for name conflict
+    existing = conn.execute(
+        "SELECT id FROM mcp_keys WHERE name = ?", (name,),
+    ).fetchone()
+    if existing:
+        return False
+    conn.execute(
+        "INSERT INTO mcp_keys (id, name, key_hash, value, created_at) VALUES (?, ?, ?, ?, ?)",
+        (key_id, name, encrypted_value, encrypted_value, _now_iso()),
+    )
+    conn.commit()
+    return True
+
+
+def delete_mcp_key(key_id: str) -> bool:
+    """Delete an MCP key by ID."""
+    conn = _get_conn()
+    cursor = conn.execute("DELETE FROM mcp_keys WHERE id = ?", (key_id,))
+    conn.commit()
+    return cursor.rowcount > 0
+
+
+# ═══════════════════════════════════════════════════════════════════
+# User Search
+# ═══════════════════════════════════════════════════════════════════
+
+
+def search_users(q: str) -> list[dict]:
+    """Search users by username or email (LIKE match)."""
+    conn = _get_conn()
+    pattern = f"%{q}%"
+    rows = conn.execute(
+        "SELECT id, username, email, role FROM users WHERE username LIKE ? OR email LIKE ? ORDER BY username LIMIT 20",
+        (pattern, pattern),
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+# ═══════════════════════════════════════════════════════════════════
+# Flixz Runs
+# ═══════════════════════════════════════════════════════════════════
+
+
+def create_flixz_run(
+    run_id: str,
+    agent_id: Optional[str],
+    video_path: str,
+    config: dict,
+    output_dir: str,
+) -> dict:
+    """Create a new flixz run record."""
+    conn = _get_conn()
+    conn.execute(
+        """INSERT INTO flixz_runs (id, agent_id, video_path, status, config,
+           output_dir, started_at)
+           VALUES (?, ?, ?, 'running', ?, ?, ?)""",
+        (run_id, agent_id, video_path, json.dumps(config), output_dir, _now_iso()),
+    )
+    conn.commit()
+    return get_flixz_run(run_id)
+
+
+def get_flixz_run(run_id: str) -> Optional[dict]:
+    """Get a single flixz run."""
+    conn = _get_conn()
+    row = conn.execute("SELECT * FROM flixz_runs WHERE id = ?", (run_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def list_flixz_runs(
+    agent_id: Optional[str] = None,
+    limit: int = 20,
+) -> list[dict]:
+    """List flixz runs, optionally filtered by agent."""
+    conn = _get_conn()
+    if agent_id is not None:
+        rows = conn.execute(
+            "SELECT * FROM flixz_runs WHERE agent_id = ? ORDER BY started_at DESC LIMIT ?",
+            (agent_id, limit),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM flixz_runs ORDER BY started_at DESC LIMIT ?",
+            (limit,),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def update_flixz_run(
+    run_id: str,
+    status: Optional[str] = None,
+    frame_count: Optional[int] = None,
+    duration_seconds: Optional[float] = None,
+    resolution: Optional[str] = None,
+    transcript_text: Optional[str] = None,
+    sink_results: Optional[str] = None,
+    error_message: Optional[str] = None,
+) -> None:
+    """Update a flixz run with results."""
+    conn = _get_conn()
+    updates = []
+    params: list = []
+    if status is not None:
+        updates.append("status = ?")
+        params.append(status)
+        if status in ("completed", "failed"):
+            updates.append("completed_at = ?")
+            params.append(_now_iso())
+    if frame_count is not None:
+        updates.append("frame_count = ?")
+        params.append(frame_count)
+    if duration_seconds is not None:
+        updates.append("duration_seconds = ?")
+        params.append(duration_seconds)
+    if resolution is not None:
+        updates.append("resolution = ?")
+        params.append(resolution)
+    if transcript_text is not None:
+        updates.append("transcript_text = ?")
+        params.append(transcript_text)
+    if sink_results is not None:
+        updates.append("sink_results = ?")
+        params.append(sink_results)
+    if error_message is not None:
+        updates.append("error_message = ?")
+        params.append(error_message)
+    if not updates:
+        return
+    params.append(run_id)
+    conn.execute(f"UPDATE flixz_runs SET {', '.join(updates)} WHERE id = ?", params)
+    conn.commit()
+
+
+def delete_flixz_run(run_id: str) -> bool:
+    """Delete a flixz run record."""
+    conn = _get_conn()
+    cursor = conn.execute("DELETE FROM flixz_runs WHERE id = ?", (run_id,))
     conn.commit()
     return cursor.rowcount > 0
 

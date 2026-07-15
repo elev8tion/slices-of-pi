@@ -417,12 +417,12 @@ async function exportCsv() {
   background: rgba(157,213,34,0.2);
 }
 .export-btn {
-  background: rgba(255,255,255,0.04);
-  color: rgba(255,255,255,0.5);
+  background: rgba(233,236,224,0.04);
+  color: rgba(233,236,224,0.5);
 }
 .export-btn:hover {
-  background: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.7);
+  background: rgba(233,236,224,0.08);
+  color: rgba(233,236,224,0.7);
 }
 
 .auto-refresh-toggle {

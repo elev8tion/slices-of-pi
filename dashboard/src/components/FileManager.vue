@@ -415,16 +415,16 @@ onMounted(() => loadDir(''))
   gap: 4px;
   padding: 4px 10px;
   border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.06);
-  background: rgba(255,255,255,0.03);
-  color: rgba(255,255,255,0.5);
+  border: 1px solid rgba(233,236,224,0.06);
+  background: rgba(233,236,224,0.03);
+  color: rgba(233,236,224,0.5);
   font-size: 10.5px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
 }
-.fm-btn:hover { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.7); }
+.fm-btn:hover { background: rgba(233,236,224,0.07); color: rgba(233,236,224,0.7); }
 .danger-btn { border-color: rgba(239,68,68,0.3); color: #EF4444; }
 .danger-btn:hover { background: rgba(239,68,68,0.1); }
 

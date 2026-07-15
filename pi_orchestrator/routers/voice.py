@@ -13,7 +13,10 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from typing import Optional
+
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Body
+from pydantic import BaseModel
 
 from ..services.ws_ticket_service import ws_ticket_service
 
@@ -89,3 +92,83 @@ def send_to_voice_session(agent_id: str, message: dict) -> None:
             asyncio.ensure_future(ws.send_json(message))
         except Exception:
             pass
+
+
+# ═══════════════════════════════════════════════════════════════════
+# REST endpoint — voice orchestration with session persistence
+# ═══════════════════════════════════════════════════════════════════
+
+
+class VoiceProcessRequest(BaseModel):
+    agent_id: str
+    transcript: str
+    session_id: Optional[str] = None
+    model: Optional[str] = None
+
+
+@router.post("/api/voice/process")
+async def voice_process(body: VoiceProcessRequest):
+    """Process a voice transcript through the orchestration pipeline.
+
+    Creates a session, sends to agent, collects response, writes
+    to agent memory, and returns the full response for TTS playback.
+    """
+    from ..services.voice_service import process_voice_transcript
+
+    result = await process_voice_transcript(
+        agent_id=body.agent_id,
+        transcript=body.transcript,
+        session_id=body.session_id,
+        model=body.model,
+    )
+
+    if "error" in result:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=result["error"])
+
+    return result
+
+
+# ═══════════════════════════════════════════════════════════════════
+# TTS endpoint — delegate to mossy
+# ═══════════════════════════════════════════════════════════════════
+
+
+class TtsRequest(BaseModel):
+    text: str
+    voice_id: Optional[str] = None
+    language: Optional[str] = None
+
+
+@router.post("/api/voice/tts")
+async def voice_tts(body: TtsRequest):
+    """Synthesize speech via mossy TTS backend.
+
+    Returns base64 WAV audio that the browser can play directly
+    via an <audio> element or Web Audio API.
+    """
+    from ..services.tts_service import synthesize
+
+    result = await synthesize(
+        text=body.text,
+        voice_id=body.voice_id,
+        language=body.language,
+    )
+
+    if result["status"] == "unavailable":
+        from fastapi import HTTPException
+        raise HTTPException(status_code=503, detail=result["error"])
+
+    if result["status"] == "error":
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=result["error"])
+
+    return result
+
+
+@router.get("/api/voice/tts/status")
+async def voice_tts_status():
+    """Check if mossy TTS backend is reachable and warm."""
+    from ..services.tts_service import is_available
+    available = await is_available()
+    return {"available": available}

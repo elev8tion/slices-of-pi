@@ -22,6 +22,9 @@ const lastResponse = ref('')
 const toolCall = ref<{ name: string; input: string } | null>(null)
 const errorMsg = ref('')
 const isListening = ref(false)
+const ttsProvider = ref<'browser' | 'mossy'>('browser')
+const mossyAvailable = ref(false)
+const ttsAudioEl = ref<HTMLAudioElement | null>(null)
 
 // Speech recognition
 let recognition: SpeechRecognition | null = null
@@ -158,19 +161,16 @@ async function sendToPi(text: string) {
   sendWs({ type: 'transcript', text })
 
   try {
-    const chatUrl = isSystem.value ? '/api/system/chat' : `/api/agents/${props.agentId}/chat`
-    const res = await fetch(chatUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text }),
-    })
-
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
-
     let responseText = ''
 
     if (isSystem.value) {
       // System chat returns JSON directly, not SSE
+      const res = await fetch('/api/system/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       responseText = data.response || data.text || JSON.stringify(data)
       lastResponse.value = responseText
@@ -181,52 +181,30 @@ async function sendToPi(text: string) {
         const router = useRouter()
         router.push(data.navigate)
       }
-
-      if (responseText.trim()) {
-        speakResponse(responseText.trim())
-      } else {
-        orbState.value = 'listening'
-        statusText.value = 'Listening...'
-      }
     } else {
-      // Agent chat returns SSE stream
-      const reader = res.body?.getReader()
-      if (!reader) throw new Error('No reader')
-
-      const decoder = new TextDecoder()
-      let buffer = ''
-
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-
-        for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          try {
-            const chunk = JSON.parse(line.slice(6))
-            if (chunk.type === 'text_delta') {
-              responseText += chunk.content || ''
-              lastResponse.value = responseText
-            } else if (chunk.type === 'tool_call') {
-              toolCall.value = {
-                name: chunk.tool_name || '',
-                input: JSON.stringify(chunk.tool_input || {}).slice(0, 200),
-              }
-            } else if (chunk.type === 'turn_end') {
-              if (responseText.trim()) {
-                speakResponse(responseText.trim())
-              } else {
-                orbState.value = 'listening'
-                statusText.value = 'Listening...'
-              }
-            }
-          } catch { /* skip */ }
-        }
+      // Agent voice — use orchestration endpoint with session persistence
+      const res = await fetch('/api/voice/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent_id: props.agentId,
+          transcript: text,
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.detail || `HTTP ${res.status}`)
       }
+      const data = await res.json()
+      responseText = data.response || ''
+      lastResponse.value = responseText
+    }
+
+    if (responseText.trim()) {
+      speakResponse(responseText.trim())
+    } else {
+      orbState.value = 'listening'
+      statusText.value = 'Listening...'
     }
   } catch (e: any) {
     errorMsg.value = `Error: ${e.message}`
@@ -247,14 +225,20 @@ async function sendToPi(text: string) {
 // ── Speech Synthesis ──────────────────────────────────────────────
 
 function speakResponse(text: string) {
+  toolCall.value = null
+  orbState.value = 'speaking'
+  statusText.value = 'Speaking...'
+
+  if (ttsProvider.value === 'mossy') {
+    speakMossy(text)
+    return
+  }
+
+  // Browser SpeechSynthesis
   if (!synth) return
 
   // Cancel any ongoing speech
   synth.cancel()
-  toolCall.value = null
-
-  orbState.value = 'speaking'
-  statusText.value = 'Speaking...'
 
   currentUtterance = new SpeechSynthesisUtterance(text)
   currentUtterance.rate = 1.1
@@ -293,6 +277,68 @@ function speakResponse(text: string) {
   }
 
   synth.speak(currentUtterance)
+}
+
+// ── Mossy TTS ─────────────────────────────────────────────────────
+
+async function speakMossy(text: string) {
+  try {
+    const res = await fetch('/api/voice/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    })
+    if (!res.ok) {
+      mossyAvailable.value = false
+      throw new Error(`HTTP ${res.status}`)
+    }
+    const data = await res.json()
+    if (data.status === 'ok' && data.audio_base64) {
+      mossyAvailable.value = true
+      const audioUrl = `data:audio/wav;base64,${data.audio_base64}`
+      if (!ttsAudioEl.value) {
+        ttsAudioEl.value = new Audio()
+      }
+      const audio = ttsAudioEl.value
+      audio.src = audioUrl
+      audio.onended = () => {
+        if (isListening.value) {
+          orbState.value = 'listening'
+          statusText.value = 'Listening...'
+        } else {
+          orbState.value = 'idle'
+          statusText.value = 'Click the orb or press Space to start'
+        }
+      }
+      audio.onerror = () => {
+        if (isListening.value) {
+          orbState.value = 'listening'
+          statusText.value = 'Listening...'
+        }
+      }
+      await audio.play()
+    } else {
+      throw new Error(data.error || 'No audio returned')
+    }
+  } catch (e: any) {
+    // Fall back to browser TTS if mossy fails
+    mossyAvailable.value = false
+    ttsProvider.value = 'browser'
+    errorMsg.value = `Mossy unavailable: ${e.message}. Using browser speech.`
+    speakResponse(text)
+  }
+}
+
+async function checkMossyStatus() {
+  try {
+    const res = await fetch('/api/voice/tts/status')
+    if (res.ok) {
+      const data = await res.json()
+      mossyAvailable.value = data.available || false
+    }
+  } catch {
+    mossyAvailable.value = false
+  }
 }
 
 // ── Start / Stop listening ────────────────────────────────────────
@@ -352,6 +398,7 @@ function onKeydown(e: KeyboardEvent) {
 
 onMounted(() => {
   connectWs()
+  checkMossyStatus()
   document.addEventListener('keydown', onKeydown)
 
   // Pre-load voices
@@ -385,6 +432,20 @@ onUnmounted(() => {
     <div class="voice-header">
       <div class="voice-agent-name">{{ agentName }}</div>
       <div class="voice-instruction">Press Space to toggle, Esc to exit</div>
+      <div class="voice-tts-toggle">
+        TTS:
+        <button
+          class="tts-option"
+          :class="{ active: ttsProvider === 'browser' }"
+          @click="ttsProvider = 'browser'"
+        >Browser</button>
+        <button
+          class="tts-option"
+          :class="{ active: ttsProvider === 'mossy', dimmed: !mossyAvailable }"
+          @click="ttsProvider = 'mossy'"
+          :title="mossyAvailable ? 'MOSS-TTS-Nano (mossy)' : 'Mossy not available'"
+        >{{ mossyAvailable ? 'Mossy 🟢' : 'Mossy ⬤' }}</button>
+      </div>
     </div>
 
     <!-- Orb area -->
@@ -495,6 +556,41 @@ onUnmounted(() => {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.2);
   margin-top: 4px;
+}
+
+.voice-tts-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  font-size: 10px;
+  color: rgba(255,255,255,0.3);
+}
+
+.tts-option {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.03);
+  color: rgba(255,255,255,0.4);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.tts-option.active {
+  background: rgba(157,213,34,0.12);
+  border-color: rgba(157,213,34,0.25);
+  color: #9DD522;
+}
+
+.tts-option.dimmed {
+  opacity: 0.4;
+}
+
+.tts-option:hover {
+  background: rgba(255,255,255,0.06);
 }
 
 /* Orb area */

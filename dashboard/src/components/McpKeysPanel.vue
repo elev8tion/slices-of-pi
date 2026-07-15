@@ -107,7 +107,7 @@ function copyValue(name: string) {
     <!-- Empty state -->
     <div v-else-if="keys.length === 0 && !showAddForm" class="card p-6 text-center">
       <div class="text-text-tertiary text-sm mb-3">No MCP keys configured</div>
-      <button @click="showAddForm = true" class="text-xs font-medium px-4 py-2 rounded-btn bg-accent text-white hover:bg-accent-hover transition-all">
+      <button @click="showAddForm = true" class="text-xs font-medium px-4 py-2 rounded-btn bg-accent text-void hover:bg-accent-hover transition-all">
         + Add Key
       </button>
     </div>
@@ -130,7 +130,7 @@ function copyValue(name: string) {
           <input v-model="newValue" type="password" placeholder="Value"
             class="input-base flex-1 text-xs font-mono" />
           <button @click="addKey" :disabled="adding || !newName.trim() || !newValue.trim()"
-            class="text-xs font-medium px-4 py-2 rounded-btn bg-accent text-white hover:bg-accent-hover transition-all disabled:opacity-30 shrink-0">
+            class="text-xs font-medium px-4 py-2 rounded-btn bg-accent text-void hover:bg-accent-hover transition-all disabled:opacity-30 shrink-0">
             {{ adding ? 'Adding...' : 'Add' }}
           </button>
           <button @click="showAddForm = false; newName = ''; newValue = ''"

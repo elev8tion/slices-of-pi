@@ -128,12 +128,6 @@ const statusColors: Record<string, string> = {
 .dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
 .dash-title h1 { font-family: 'Clash Display', sans-serif; font-size: 26px; font-weight: 600; letter-spacing: -0.03em; color: #F0F0F2; }
 .dash-title p { font-size: 13px; color: rgba(255,255,255,0.3); font-weight: 500; margin-top: 2px; }
-.btn-primary {
-  background: #6366F1; color: #fff; border: none; border-radius: 12px;
-  font-size: 12.5px; font-weight: 500; font-family: inherit; cursor: pointer;
-  padding: 8px 18px; transition: all 0.3s ease;
-  box-shadow: 0 2px 12px rgba(99,102,241,0.25);
-}
-.btn-primary:hover { background: #4F46E5; }
+
 @media (max-width: 968px) { .dashboard { padding: 16px; } }
 </style>

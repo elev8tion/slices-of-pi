@@ -19,8 +19,8 @@ const configExpanded = ref(false)
 const config = ref({
   fps: 0,
   sceneDetect: true,
-  transcript: 'none' as 'none' | 'whisper' | 'openai' | 'groq',
-  describe: 'none' as 'none' | 'haiku' | 'gpt4o-mini',
+  transcript: 'none' as 'none' | 'native',
+  describe: 'none' as 'none' | 'gemini' | 'claude',
   maxFrames: 60,
   sinks: [] as string[],
 })
@@ -39,7 +39,13 @@ const frameCount = computed(() => {
 })
 
 const transcriptText = computed(() => {
-  return lastResult.value?.audio?.transcript?.text || ''
+  if (typeof lastResult.value?.transcript === 'string') return lastResult.value.transcript
+  return ''
+})
+
+const transcriptSegments = computed(() => {
+  if (Array.isArray(lastResult.value?.transcript_segments)) return lastResult.value.transcript_segments
+  return []
 })
 
 // ── Methods ───────────────────────────────────────────────────
@@ -50,66 +56,35 @@ async function processVideo() {
   activeTab.value = 'results'
 
   try {
-    // Build args for the flixz CLI
-    const args = [videoPath.value.trim(), '--emit', 'json', '--max-frames', String(config.value.maxFrames)]
-    if (!config.value.sceneDetect) args.push('--no-scene-detect')
-    if (config.value.fps > 0) args.push('--fps', String(config.value.fps))
-    if (config.value.transcript !== 'none') args.push('--transcribe', config.value.transcript)
-    if (config.value.describe !== 'none') args.push('--describe', config.value.describe)
-    if (selectedSinks.value.length > 0) {
-      for (const s of selectedSinks.value) args.push('--sink', s)
-    }
-
-    // Call the orchestrator to run the flixz CLI
-    const res = await fetch(`/api/agents/${props.agentId}/chat`, {
+    // Call the Flixz backend endpoint directly
+    const res = await fetch(`/api/agents/${props.agentId}/flixz/extract`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: `Run flixz to process this video: ${args.join(' ')}`
+        video_path: videoPath.value.trim(),
+        max_frames: config.value.maxFrames,
+        fps: config.value.fps,
+        scene_detect: config.value.sceneDetect,
+        transcript: config.value.transcript,
+        describe: config.value.describe,
       }),
     })
-    if (!res.ok) throw new Error(`HTTP ${res.status}`)
 
-    // Collect streaming output
-    const reader = res.body?.getReader()
-    if (!reader) throw new Error('No response body')
+    const data = await res.json()
+    if (!res.ok) throw new Error(data.detail || data.error_message || `HTTP ${res.status}`)
 
-    const decoder = new TextDecoder()
-    let buffer = ''
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-      buffer += decoder.decode(value, { stream: true })
-      // Parse SSE events
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const event = JSON.parse(line.slice(6))
-            if (event.type === 'text_delta' && event.content) {
-              // Try to parse if it looks like JSON output
-              if (event.content.trim().startsWith('{')) {
-                try { lastResult.value = JSON.parse(event.content) } catch {}
-              }
-            }
-            if (event.type === 'turn_end') {
-              // Session complete
-            }
-          } catch {}
-        }
-      }
+    if (data.status === 'completed') {
+      lastResult.value = data
+      recentRuns.value.unshift({
+        dir: data.output_dir || `~/flixz/output/${data.run_id}`,
+        name: videoPath.value.split('/').pop() || 'video',
+        time: new Date().toLocaleString(),
+      })
+      if (recentRuns.value.length > 20) recentRuns.value = recentRuns.value.slice(0, 20)
+      toastBus.success(`Extracted ${data.frame_count} frames`)
+    } else {
+      throw new Error(data.error_message || 'Extraction failed')
     }
-
-    // Add to recent runs
-    recentRuns.value.unshift({
-      dir: `~/flixz-runs/${Date.now()}`,
-      name: videoPath.value.split('/').pop() || 'video',
-      time: new Date().toLocaleString(),
-    })
-
-    toastBus.success('Video processed successfully')
   } catch (e: any) {
     toastBus.error(e.message || 'Failed to process video')
   } finally {
@@ -193,17 +168,15 @@ function clearResult() {
             <label class="text-[10px] text-text-muted">Transcription</label>
             <select v-model="config.transcript" class="flixz-select">
               <option value="none">None</option>
-              <option value="whisper">Whisper (local)</option>
-              <option value="openai">OpenAI Whisper</option>
-              <option value="groq">Groq</option>
+              <option value="native">Apple On-Device (Native)</option>
             </select>
           </div>
           <div class="flixz-config-field">
             <label class="text-[10px] text-text-muted">Frame Description</label>
             <select v-model="config.describe" class="flixz-select">
               <option value="none">None</option>
-              <option value="haiku">Anthropic Haiku</option>
-              <option value="gpt4o-mini">GPT-4o-mini</option>
+              <option value="gemini">Gemini Vision</option>
+              <option value="claude">Claude Vision</option>
             </select>
           </div>
         </div>
@@ -267,7 +240,7 @@ function clearResult() {
         <div class="flixz-summary-card">
           <div class="flixz-summary-grid">
             <div class="flixz-stat">
-              <span class="flixz-stat-value">{{ lastResult.video?.durationSeconds?.toFixed(1) || '?' }}s</span>
+              <span class="flixz-stat-value">{{ lastResult.duration_seconds?.toFixed(1) || lastResult.video?.durationSeconds?.toFixed(1) || '?' }}s</span>
               <span class="flixz-stat-label">Duration</span>
             </div>
             <div class="flixz-stat">
@@ -275,11 +248,11 @@ function clearResult() {
               <span class="flixz-stat-label">Frames</span>
             </div>
             <div class="flixz-stat">
-              <span class="flixz-stat-value">{{ lastResult.video?.width || '?' }}×{{ lastResult.video?.height || '?' }}</span>
+              <span class="flixz-stat-value">{{ lastResult.resolution || (lastResult.video ? lastResult.video.width + '×' + lastResult.video.height : '?') }}</span>
               <span class="flixz-stat-label">Resolution</span>
             </div>
             <div class="flixz-stat">
-              <span class="flixz-stat-value">{{ lastResult.sinks?.length || 0 }}</span>
+              <span class="flixz-stat-value">{{ (lastResult.sinks || []).length || 0 }}</span>
               <span class="flixz-stat-label">Sinks</span>
             </div>
           </div>
@@ -287,14 +260,19 @@ function clearResult() {
 
         <!-- Frame thumbnails -->
         <div v-if="lastResult.frames?.length" class="flixz-section">
-          <div class="text-[11px] font-semibold text-text-secondary mb-2">Frames</div>
+          <div class="text-[11px] font-semibold text-text-secondary mb-2">
+            Frames ({{ lastResult.frames.length }})
+          </div>
           <div class="flixz-frame-grid">
             <div v-for="(frame, i) in lastResult.frames.slice(0, 30)" :key="i" class="flixz-frame-thumb">
-              <div class="flixz-frame-placeholder">
+              <img
+                v-if="typeof frame === 'string' && frame.length > 10"
+                :src="'data:image/png;base64,' + frame"
+                class="flixz-frame-img"
+                :alt="'Frame ' + (i + 1)"
+              />
+              <div v-else class="flixz-frame-placeholder">
                 <span class="text-[9px] text-text-muted">f{{ i + 1 }}</span>
-              </div>
-              <div v-if="frame.timestamp" class="text-[8px] text-text-muted text-center mt-0.5">
-                {{ typeof frame.timestamp === 'number' ? frame.timestamp.toFixed(1) + 's' : frame.timestamp }}
               </div>
             </div>
           </div>
@@ -305,10 +283,23 @@ function clearResult() {
 
         <!-- Transcript -->
         <div v-if="transcriptText" class="flixz-section">
-          <div class="text-[11px] font-semibold text-text-secondary mb-1">Transcript</div>
+          <div class="text-[11px] font-semibold text-text-secondary mb-1">
+            Transcript
+            <span v-if="transcriptSegments.length" class="text-[9px] text-text-muted ml-1">
+              ({{ transcriptSegments.length }} segments)
+            </span>
+          </div>
           <div class="flixz-transcript-box">
-            {{ transcriptText.slice(0, 500) }}
-            <span v-if="transcriptText.length > 500" class="text-lime">...</span>
+            <template v-if="transcriptSegments.length">
+              <div v-for="seg in transcriptSegments" :key="seg.index" class="flixz-segment-row">
+                <span class="flixz-segment-time">{{ seg.start?.toFixed(1) }}s</span>
+                <span class="flixz-segment-text">{{ seg.text }}</span>
+              </div>
+            </template>
+            <template v-else>
+              {{ transcriptText.slice(0, 500) }}
+              <span v-if="transcriptText.length > 500" class="text-lime">...</span>
+            </template>
           </div>
         </div>
 
@@ -588,6 +579,13 @@ function clearResult() {
   align-items: center;
   justify-content: center;
 }
+.flixz-frame-img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.06);
+}
 
 /* Transcript */
 .flixz-transcript-box {
@@ -601,6 +599,29 @@ function clearResult() {
   max-height: 200px;
   overflow-y: auto;
   white-space: pre-wrap;
+}
+.flixz-segment-row {
+  display: flex;
+  gap: 8px;
+  padding: 2px 0;
+  align-items: flex-start;
+}
+.flixz-segment-row + .flixz-segment-row {
+  border-top: 1px solid rgba(255,255,255,0.02);
+  padding-top: 6px;
+  margin-top: 2px;
+}
+.flixz-segment-time {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: #9DD522;
+  min-width: 42px;
+  flex-shrink: 0;
+}
+.flixz-segment-text {
+  font-size: 11px;
+  color: rgba(233,236,224,0.55);
+  line-height: 1.5;
 }
 
 /* Sink row */
