@@ -378,15 +378,20 @@ async def _describe_frames(
     provider: str = "gemini",
     prompt: str = "Describe this video frame in detail. What do you see?",
     max_frames: int = 30,
+    model: Optional[str] = None,
 ) -> list[dict]:
     """Send frames for description via the specified provider.
 
     Args:
         provider: 'gemini' (uses GEMINI_API_KEY) or 'claude' (uses ~/.pi/agent/auth.json).
+        model: Optional model id from the operator's pi list (within that backend).
     """
     try:
         from pi_orchestrator.services.frame_description_service import describe_frame_batch
-        return await describe_frame_batch(frame_paths[:max_frames], prompt, provider=provider)
+        kwargs: dict = {"provider": provider}
+        if model:
+            kwargs["model"] = model
+        return await describe_frame_batch(frame_paths[:max_frames], prompt, **kwargs)
     except ImportError:
         logger.warning("frame_description_service not available — skipping descriptions")
         return []
@@ -402,6 +407,7 @@ async def extract_video(
     scene_detect: bool = True,
     transcript: str = "none",
     describe: str = "none",
+    describe_model: Optional[str] = None,
     agent_id: Optional[str] = None,
     timeout_seconds: Optional[int] = None,
 ) -> dict:
@@ -433,6 +439,7 @@ async def extract_video(
         "scene_detect": scene_detect,
         "transcript": transcript,
         "describe": describe,
+        "describe_model": describe_model,
     }
 
     run = db.create_flixz_run(
@@ -482,12 +489,18 @@ async def extract_video(
         frame_descriptions: list[dict] = []
         if describe in ("gemini", "claude"):
             frame_descriptions = await _describe_frames(
-                frame_paths, provider=describe, max_frames=min(max_frames, 30)
+                frame_paths,
+                provider=describe,
+                max_frames=min(max_frames, 30),
+                model=describe_model,
             )
         elif describe != "none":
             logger.info(f"Frame description provider '{describe}' — using gemini as default")
             frame_descriptions = await _describe_frames(
-                frame_paths, provider="gemini", max_frames=min(max_frames, 30)
+                frame_paths,
+                provider="gemini",
+                max_frames=min(max_frames, 30),
+                model=describe_model,
             )
 
         # ── 4. Audio transcription (Apple SFSpeechRecognizer) ──

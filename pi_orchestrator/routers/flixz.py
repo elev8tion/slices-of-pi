@@ -25,6 +25,7 @@ class FlixzExtractRequest(BaseModel):
     scene_detect: bool = True
     transcript: str = Field("none", pattern=r"^(none|native)$")
     describe: str = Field("none", pattern=r"^(none|gemini|claude)$")
+    describe_model: Optional[str] = Field(None, description="Optional vision model id from pi list")
     timeout_seconds: Optional[int] = Field(None, ge=10, le=3600)
 
 
@@ -43,6 +44,7 @@ async def system_flixz_extract(body: FlixzExtractRequest):
         scene_detect=body.scene_detect,
         transcript=body.transcript,
         describe=body.describe,
+        describe_model=body.describe_model,
         agent_id=None,
         timeout_seconds=body.timeout_seconds,
     )
@@ -93,6 +95,7 @@ async def agent_flixz_extract(agent_id: str, body: FlixzExtractRequest):
         scene_detect=body.scene_detect,
         transcript=body.transcript,
         describe=body.describe,
+        describe_model=body.describe_model,
         agent_id=agent_id,
         timeout_seconds=body.timeout_seconds,
     )

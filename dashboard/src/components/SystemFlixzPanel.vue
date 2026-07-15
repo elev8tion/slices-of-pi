@@ -21,15 +21,42 @@ const config = ref({
   fps: 0,
   sceneDetect: true,
   transcript: 'none' as string,
+  /** Vision backend for frame description — not the full pi chat model list */
   describe: 'none' as string,
+  /** Optional model id within that backend (from pi list, images=yes) */
+  describeModel: '' as string,
 })
 const extracting = ref(false)
 const runs = ref<FlixzRun[]>([])
 const expandedRun = ref<string | null>(null)
 const runDetail = ref<any>(null)
 const runsLoading = ref(false)
+const visionModels = ref<{ id: string; label: string; provider: string; providerLabel: string }[]>([])
 
 const canExtract = computed(() => config.value.videoPath.trim().length > 0 && !extracting.value)
+
+const describeModelOptions = computed(() => {
+  if (config.value.describe === 'gemini') {
+    return visionModels.value.filter(m =>
+      m.provider.includes('google') || m.id.toLowerCase().includes('gemini'),
+    )
+  }
+  if (config.value.describe === 'claude') {
+    return visionModels.value.filter(m =>
+      m.provider.includes('anthropic') || m.id.toLowerCase().includes('claude'),
+    )
+  }
+  return []
+})
+
+async function loadVisionModels() {
+  try {
+    const res = await fetch('/api/system/models?images_only=true')
+    if (!res.ok) return
+    const data = await res.json()
+    visionModels.value = data.flat || []
+  } catch { /* optional */ }
+}
 
 async function fetchRuns() {
   runsLoading.value = true
@@ -57,6 +84,7 @@ async function doExtract() {
         scene_detect: config.value.sceneDetect,
         transcript: config.value.transcript,
         describe: config.value.describe,
+        describe_model: config.value.describeModel || undefined,
       }),
     })
     const data = await res.json()
@@ -107,7 +135,10 @@ function statusColor(status: string): string {
   }
 }
 
-onMounted(fetchRuns)
+onMounted(() => {
+  fetchRuns()
+  loadVisionModels()
+})
 </script>
 
 <template>
@@ -160,12 +191,26 @@ onMounted(fetchRuns)
         </div>
         <div class="sys-flixz-field flex-1">
           <label class="sys-flixz-label">Frame Description</label>
-          <select v-model="config.describe" class="input-base w-full text-xs">
-            <option value="none">None</option>
-            <option value="gemini">Gemini Vision</option>
-            <option value="claude">Claude Vision</option>
+          <select v-model="config.describe" class="input-base w-full text-xs" @change="config.describeModel = ''">
+            <option value="none">None (frames only)</option>
+            <option value="gemini">Gemini Vision API</option>
+            <option value="claude">Claude Vision API</option>
           </select>
+          <p class="sys-flixz-hint">
+            This is <strong>not</strong> your full pi chat model list. Flixz only runs Gemini/Claude vision backends for describing frames.
+            Your full models appear when creating agents (from <code>pi --list-models</code>).
+          </p>
         </div>
+      </div>
+
+      <div v-if="config.describe !== 'none' && describeModelOptions.length" class="sys-flixz-field">
+        <label class="sys-flixz-label">Vision model (from your pi list, images=yes)</label>
+        <select v-model="config.describeModel" class="input-base w-full text-xs">
+          <option value="">Default for backend</option>
+          <option v-for="m in describeModelOptions" :key="m.id" :value="m.id">
+            {{ m.providerLabel }} / {{ m.label }}
+          </option>
+        </select>
       </div>
 
       <label class="sys-flixz-check">

@@ -304,7 +304,9 @@ async def describe_frame_batch(
         async with sem:
             try:
                 if provider == "claude":
-                    results[idx] = await _describe_frame_claude(path, prompt)
+                    results[idx] = await _describe_frame_claude(
+                        path, prompt, model=model or "claude-sonnet-4-5"
+                    )
                 else:
                     results[idx] = await describe_frame(path, prompt, model)
             except Exception as e:
@@ -314,7 +316,7 @@ async def describe_frame_batch(
                 results[idx] = {
                     "filename": Path(path).name,
                     "description": f"[Error: {e}]",
-                    "model": "claude-sonnet-4-20250514" if provider == "claude" else model,
+                    "model": model or ("claude-sonnet-4-5" if provider == "claude" else DEFAULT_MODEL),
                     "tokens_used": 0,
                     "provider": provider,
                 }

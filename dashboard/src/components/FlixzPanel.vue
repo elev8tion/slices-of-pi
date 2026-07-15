@@ -174,10 +174,13 @@ function clearResult() {
           <div class="flixz-config-field">
             <label class="text-[10px] text-text-muted">Frame Description</label>
             <select v-model="config.describe" class="flixz-select">
-              <option value="none">None</option>
-              <option value="gemini">Gemini Vision</option>
-              <option value="claude">Claude Vision</option>
+              <option value="none">None (frames only)</option>
+              <option value="gemini">Gemini Vision API</option>
+              <option value="claude">Claude Vision API</option>
             </select>
+            <p class="flixz-hint">
+              Vision backends only — not your full pi chat model list. Agent models use Create Agent / ModelSelector.
+            </p>
           </div>
         </div>
       </div>

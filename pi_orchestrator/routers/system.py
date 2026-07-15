@@ -20,70 +20,78 @@ class InstallRequest(BaseModel):
 
 
 @router.get("/models")
-async def list_models():
-    """Return available models grouped by provider.
+async def list_models(images_only: bool = False):
+    """Return models from `pi --list-models` (your configured .pi providers).
 
-    Parses the output of `pi --list-models` to build a structured
-    list of models organized by provider with metadata.
+    Returns:
+      models: groups by provider
+      flat: all models as a single list (for selectors)
+      count: number of models
+
+    Query images_only=true filters to vision-capable models (images=yes).
     """
     try:
+        import re
+
         proc = await asyncio.create_subprocess_exec(
             PI_BINARY, "--list-models",
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,  # pi outputs models on stderr
+            stderr=asyncio.subprocess.STDOUT,
         )
-        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=15)
+        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=20)
         output = stdout.decode().strip()
         if not output:
-            return {"models": [], "error": "No output from pi --list-models"}
+            return {"models": [], "flat": [], "count": 0, "error": "No output from pi --list-models"}
 
         PROVIDER_COLORS = {
             "anthropic": "#8B5CF6",
             "openai-codex": "#22C55E",
+            "openai": "#22C55E",
             "deepseek-openai": "#F59E0B",
             "g0dm0d3-deepseek-openai": "#F59E0B",
+            "fairy-tales-deepseek-openai": "#F59E0B",
             "google-gla": "#3B82F6",
+            "google": "#3B82F6",
             "nvidia-nim": "#76B900",
             "kimi-coding": "#EC4899",
             "mlx-local": "#6B7280",
             "cloudflare-ai-gateway": "#F6821F",
             "cloudflare-workers-ai": "#F6821F",
+            "glm": "#0EA5E9",
+            "g0dm0d3-glm": "#0EA5E9",
+            "agua": "#F59E0B",
+            "fugu": "#EC4899",
         }
 
         PROVIDER_LABELS = {
             "anthropic": "Anthropic",
             "openai-codex": "OpenAI",
+            "openai": "OpenAI",
             "deepseek-openai": "DeepSeek",
-            "g0dm0d3-deepseek-openai": "DeepSeek",
+            "g0dm0d3-deepseek-openai": "DeepSeek (g0dm0d3)",
+            "fairy-tales-deepseek-openai": "DeepSeek (fairy-tales)",
             "google-gla": "Google",
+            "google": "Google",
             "nvidia-nim": "NVIDIA NIM",
             "kimi-coding": "Kimi",
             "mlx-local": "Local (MLX)",
             "cloudflare-ai-gateway": "Cloudflare",
             "cloudflare-workers-ai": "Cloudflare Workers",
+            "glm": "GLM",
+            "g0dm0d3-glm": "GLM (g0dm0d3)",
+            "agua": "Agua",
+            "fugu": "Fugu",
         }
 
-        PROVIDER_ORDER = {
-            k: i for i, k in enumerate([
-                "anthropic", "openai-codex", "deepseek-openai",
-                "g0dm0d3-deepseek-openai", "google-gla", "nvidia-nim",
-                "kimi-coding", "mlx-local", "cloudflare-ai-gateway",
-                "cloudflare-workers-ai",
-            ])
-        }
-
-        # Parse the tabular output
-        # pi --list-models uses space-separated columns with variable widths
         # Format: provider model context max-out thinking images
         lines = output.split("\n")
         groups: dict[str, dict] = {}
+        flat: list[dict] = []
 
         for line in lines:
             if not line.strip() or line.startswith("-"):
                 continue
 
-            # Split on 2+ spaces to get columns (handles variable-width columns)
-            import re
             cols = re.split(r"\s{2,}", line.strip())
             if len(cols) < 2:
                 continue
@@ -91,52 +99,71 @@ async def list_models():
             provider = cols[0].strip()
             model_id = cols[1].strip()
 
-            # Skip header rows
-            if provider == "provider" or model_id == "model":
+            if provider.lower() == "provider" or model_id.lower() == "model":
                 continue
 
-            # Extract context and thinking from remaining columns
             context = cols[2].strip() if len(cols) >= 3 else ""
-            thinking_col = cols[4].strip().lower() if len(cols) >= 5 else "no"
-            thinking = thinking_col == "yes"
+            thinking = False
+            images = False
+            if len(cols) >= 6:
+                thinking = cols[4].strip().lower() in ("yes", "true", "1")
+                images = cols[5].strip().lower() in ("yes", "true", "1")
+            elif len(cols) >= 5:
+                thinking = cols[4].strip().lower() in ("yes", "true", "1")
+
+            if images_only and not images:
+                continue
+
+            color = PROVIDER_COLORS.get(provider, "#6B7280")
+            provider_label = PROVIDER_LABELS.get(provider, provider)
 
             if provider not in groups:
                 groups[provider] = {
-                    "label": PROVIDER_LABELS.get(provider, provider),
-                    "color": PROVIDER_COLORS.get(provider, "#6B7280"),
+                    "provider": provider,
+                    "label": provider_label,
+                    "color": color,
                     "models": [],
                 }
 
-            # Build a clean label
-            label = model_id
-            short_label = label.split("/")[-1] if "/" in label else label
-
-            groups[provider]["models"].append({
-                "id": label,
+            short_label = model_id.split("/")[-1] if "/" in model_id else model_id
+            entry = {
+                "id": model_id,
                 "label": short_label,
                 "provider": provider,
-                "providerLabel": PROVIDER_LABELS.get(provider, provider),
+                "providerLabel": provider_label,
+                "color": color,
                 "context": context,
                 "thinking": thinking,
-            })
+                "images": images,
+            }
+            groups[provider]["models"].append(entry)
+            flat.append(entry)
 
-        # Convert to sorted array
         result = sorted(
             groups.values(),
-            key=lambda g: (PROVIDER_ORDER.get(g["label"], 99), g["label"]),
+            key=lambda g: (g.get("label") or "").lower(),
         )
-        # Sort models within each group
         for g in result:
             g["models"] = sorted(g["models"], key=lambda m: m["id"])
 
-        return {"models": result}
+        flat_sorted = sorted(
+            flat,
+            key=lambda m: (m["providerLabel"].lower(), m["label"].lower()),
+        )
+
+        return {
+            "models": result,
+            "flat": flat_sorted,
+            "count": len(flat_sorted),
+            "source": "pi --list-models",
+        }
 
     except asyncio.TimeoutError:
-        return {"models": [], "error": "pi --list-models timed out"}
+        return {"models": [], "flat": [], "count": 0, "error": "pi --list-models timed out"}
     except FileNotFoundError:
-        return {"models": [], "error": "pi binary not found"}
+        return {"models": [], "flat": [], "count": 0, "error": "pi binary not found"}
     except Exception as e:
-        return {"models": [], "error": str(e)}
+        return {"models": [], "flat": [], "count": 0, "error": str(e)}
 
 
 @router.get("/version")
