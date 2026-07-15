@@ -175,13 +175,12 @@ function clearResult() {
             <label class="text-[10px] text-text-muted">Frame Description</label>
             <select v-model="config.describe" class="flixz-select">
               <option value="none">None (frames only)</option>
-              <option value="gemini">Gemini Vision</option>
+              <option value="openai">OpenAI Codex (OAuth)</option>
+              <option value="grok">Grok / xAI</option>
               <option value="claude">Claude Vision</option>
-              <option value="openai">OpenAI / Codex Vision</option>
-              <option value="grok">Grok Vision (xAI)</option>
             </select>
             <p class="flixz-hint">
-              Vision API backends (auth from ~/.pi). Full pi chat models: Create agent.
+              Same OAuth as pi (openai-codex / xai-auth / anthropic). Create agent still has full chat models.
             </p>
           </div>
         </div>

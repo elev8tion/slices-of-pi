@@ -26,8 +26,8 @@ class FlixzExtractRequest(BaseModel):
     transcript: str = Field("none", pattern=r"^(none|native)$")
     describe: str = Field(
         "none",
-        pattern=r"^(none|gemini|claude|openai|openai-codex|grok|xai|xai-auth)$",
-        description="Vision backend: gemini|claude|openai|grok (aliases openai-codex, xai-auth)",
+        pattern=r"^(none|claude|openai|openai-codex|grok|xai|xai-auth)$",
+        description="Vision backend: claude|openai(codex oauth)|grok (aliases openai-codex, xai-auth). Gemini removed.",
     )
     describe_model: Optional[str] = Field(None, description="Optional vision model id from pi list")
     timeout_seconds: Optional[int] = Field(None, ge=10, le=3600)

@@ -37,19 +37,17 @@ const canExtract = computed(() => config.value.videoPath.trim().length > 0 && !e
 
 const describeModelOptions = computed(() => {
   const d = config.value.describe
-  if (d === 'gemini') {
-    return visionModels.value.filter(m =>
-      m.provider.includes('google') || m.id.toLowerCase().includes('gemini'),
-    )
-  }
   if (d === 'claude') {
     return visionModels.value.filter(m =>
       m.provider.includes('anthropic') || m.id.toLowerCase().includes('claude'),
     )
   }
   if (d === 'openai' || d === 'openai-codex') {
+    // Your pi openai-codex OAuth models (vision-capable)
     return visionModels.value.filter(m =>
-      m.provider.includes('openai') || m.id.toLowerCase().includes('gpt'),
+      m.provider === 'openai-codex'
+      || m.provider.includes('openai')
+      || m.id.toLowerCase().includes('gpt'),
     )
   }
   if (d === 'grok' || d === 'xai' || d === 'xai-auth') {
@@ -204,16 +202,13 @@ onMounted(() => {
           <label class="sys-flixz-label">Frame Description</label>
           <select v-model="config.describe" class="input-base w-full text-xs" @change="config.describeModel = ''">
             <option value="none">None (frames only)</option>
-            <option value="gemini">Gemini Vision</option>
-            <option value="claude">Claude Vision (Anthropic)</option>
-            <option value="openai">OpenAI / Codex Vision</option>
-            <option value="grok">Grok Vision (xAI)</option>
+            <option value="openai">OpenAI Codex (OAuth — same as pi)</option>
+            <option value="grok">Grok / xAI (OAuth)</option>
+            <option value="claude">Claude Vision (Anthropic OAuth)</option>
           </select>
           <p class="sys-flixz-hint">
-            Frame description uses a <strong>vision API backend</strong>, then you pick a model from that family
-            (filtered from your <code>pi --list-models</code> with images=yes).
-            Auth comes from <code>~/.pi/agent/auth.json</code> (openai-codex, xai-auth, etc.) or env keys.
-            Full chat model list is still under Create agent.
+            Uses your existing <code>~/.pi</code> OAuth (openai-codex → ChatGPT backend, xai-auth, anthropic).
+            Pick a vision model below from <code>pi --list-models</code> (images=yes).
           </p>
         </div>
       </div>

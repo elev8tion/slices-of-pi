@@ -488,7 +488,7 @@ async def extract_video(
         # ── 3. Frame descriptions (Gemini or Claude Vision) ────
         frame_descriptions: list[dict] = []
         _VISION = {
-            "gemini", "claude", "openai", "openai-codex", "grok", "xai", "xai-auth",
+            "claude", "openai", "openai-codex", "grok", "xai", "xai-auth",
         }
         if describe in _VISION:
             frame_descriptions = await _describe_frames(
@@ -498,10 +498,14 @@ async def extract_video(
                 model=describe_model,
             )
         elif describe != "none":
-            logger.info(f"Frame description provider '{describe}' — using gemini as default")
+            # Unknown provider — prefer claude (operator already has working Anthropic OAuth)
+            logger.info(
+                "Frame description provider %r unknown — using claude",
+                describe,
+            )
             frame_descriptions = await _describe_frames(
                 frame_paths,
-                provider="gemini",
+                provider="claude",
                 max_frames=min(max_frames, 30),
                 model=describe_model,
             )
