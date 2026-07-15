@@ -69,6 +69,10 @@ onUnmounted(() => {
         <span v-if="!collapsed">Needs Attention</span>
         <span class="badge" v-if="!collapsed" :style="{ color: opsPending > 0 ? '#F59E0B' : 'rgba(233,236,224,0.35)' }">{{ opsPending > 0 ? opsPending : (store.errorAgents || '0') }}</span>
       </router-link>
+      <router-link to="/flixz" class="sidebar-item" :class="{ active: isActive('/flixz') }" :title="collapsed ? 'Flixz' : ''">
+        <span class="sidebar-icon">🎞</span>
+        <span v-if="!collapsed">Flixz</span>
+      </router-link>
     </div>
 
     <div class="sidebar-divider" />

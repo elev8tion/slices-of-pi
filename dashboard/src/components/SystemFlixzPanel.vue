@@ -117,8 +117,8 @@ onMounted(fetchRuns)
       <div class="sys-flixz-brand">
         <span class="sys-flixz-icon">🎞</span>
         <div>
-          <div class="sys-flixz-title">Frame Extraction</div>
-          <div class="sys-flixz-sub">Process videos without an agent session</div>
+          <div class="sys-flixz-title">Flixz (general)</div>
+          <div class="sys-flixz-sub">Operator tool — system-level extract via /api/flixz (no agent)</div>
         </div>
       </div>
     </div>
@@ -131,9 +131,12 @@ onMounted(fetchRuns)
           v-model="config.videoPath"
           type="text"
           class="input-base w-full text-xs"
-          placeholder="/path/to/video.mp4 or https://..."
+          placeholder="~/.pi/flixz/input/video.mp4 or https://..."
           @keyup.enter="doExtract"
         />
+        <p class="sys-flixz-hint">
+          Local files must be under ~/.pi/flixz/input (or PI_FLIXZ_ALLOW_ROOTS). HTTP(S) URLs use yt-dlp.
+        </p>
       </div>
 
       <div class="sys-flixz-row">
@@ -152,17 +155,14 @@ onMounted(fetchRuns)
           <label class="sys-flixz-label">Transcription</label>
           <select v-model="config.transcript" class="input-base w-full text-xs">
             <option value="none">None</option>
-            <option value="whisper">Whisper (local)</option>
-            <option value="openai">OpenAI Whisper</option>
-            <option value="groq">Groq</option>
+            <option value="native">Native (macOS VoiceKit)</option>
           </select>
         </div>
         <div class="sys-flixz-field flex-1">
           <label class="sys-flixz-label">Frame Description</label>
           <select v-model="config.describe" class="input-base w-full text-xs">
             <option value="none">None</option>
-            <option value="haiku">Anthropic Haiku</option>
-            <option value="gpt4o-mini">GPT-4o-mini</option>
+            <option value="gemini">Gemini Vision</option>
             <option value="claude">Claude Vision</option>
           </select>
         </div>
@@ -296,6 +296,12 @@ onMounted(fetchRuns)
   gap: 4px;
 }
 
+.sys-flixz-hint {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.28);
+  line-height: 1.35;
+  margin-top: 4px;
+}
 .sys-flixz-label {
   font-size: 10px;
   font-weight: 500;

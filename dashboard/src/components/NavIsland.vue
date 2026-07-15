@@ -48,6 +48,7 @@ const primaryLinks = [
   { to: '/', label: 'Dashboard' },
   { to: '/agents', label: 'Agents' },
   { to: '/sessions', label: 'Sessions' },
+  { to: '/flixz', label: 'Flixz' },
   { to: '/console', label: 'Console' },
   { to: '/replay', label: 'Replay' },
 ]

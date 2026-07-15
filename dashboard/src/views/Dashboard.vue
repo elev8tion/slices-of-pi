@@ -38,6 +38,9 @@ function closeDetail() { selectedAgent.value = null }
           <p>{{ store.agents.length }} agents &middot; {{ store.onlineAgents }} online &middot; {{ store.errorAgents }} alerts</p>
         </div>
         <div class="dash-actions gap-2">
+          <router-link to="/flixz" class="btn btn-secondary" title="General frame extraction — no agent required">
+            <span>🎞 Flixz</span>
+          </router-link>
           <router-link to="/templates" class="btn btn-secondary">
             <span>New Agent</span>
           </router-link>
@@ -52,12 +55,25 @@ function closeDetail() { selectedAgent.value = null }
         <StatCard label="Uptime" value="99.8%" sub="7d avg" />
       </div>
 
+      <!-- General Flixz entry — operator tool, separate from per-agent Flixz -->
+      <router-link to="/flixz" class="flixz-dash-card fade-up fade-up-d4">
+        <div class="flixz-dash-icon">🎞</div>
+        <div class="flixz-dash-copy">
+          <div class="flixz-dash-title">Flixz — general frame extraction</div>
+          <div class="flixz-dash-sub">
+            Drop a path or URL, extract frames for analysis. Not tied to any agent.
+            Local files: place under ~/.pi/flixz/input or set PI_FLIXZ_ALLOW_ROOTS.
+          </div>
+        </div>
+        <span class="flixz-dash-cta">Open →</span>
+      </router-link>
+
       <!-- Tag Cloud -->
-      <TagCloud class="fade-up fade-up-d4" />
+      <TagCloud class="fade-up fade-up-d5" />
 
       <!-- Agent Grid -->
-      <SectionBar title="Active Agents" class="fade-up fade-up-d5" />
-      <div class="agent-grid fade-up fade-up-d6">
+      <SectionBar title="Active Agents" class="fade-up fade-up-d6" />
+      <div class="agent-grid fade-up fade-up-d7">
         <AgentCard
           v-for="agent in store.agents"
           :key="agent.id"
@@ -152,7 +168,58 @@ function closeDetail() { selectedAgent.value = null }
   text-decoration: none;
   transition: all 0.4s cubic-bezier(0.32,0.72,0,1);
 }
-
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(240, 240, 242, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.btn-secondary:hover {
+  background: rgba(157, 213, 34, 0.12);
+  border-color: rgba(157, 213, 34, 0.25);
+  color: #D3ED2F;
+}
+.flixz-dash-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  text-decoration: none;
+  background: linear-gradient(135deg, rgba(157, 213, 34, 0.08), rgba(18, 26, 17, 0.6));
+  border: 1px solid rgba(157, 213, 34, 0.18);
+  transition: border-color 0.25s ease, transform 0.25s ease;
+}
+.flixz-dash-card:hover {
+  border-color: rgba(157, 213, 34, 0.4);
+  transform: translateY(-1px);
+}
+.flixz-dash-icon {
+  font-size: 28px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.flixz-dash-copy {
+  flex: 1;
+  min-width: 0;
+}
+.flixz-dash-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #E9ECE0;
+  margin-bottom: 4px;
+}
+.flixz-dash-sub {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.35);
+  line-height: 1.4;
+}
+.flixz-dash-cta {
+  font-size: 12px;
+  font-weight: 600;
+  color: #9DD522;
+  flex-shrink: 0;
+}
 
 .fade-up { opacity: 0; transform: translateY(16px); animation: fadeUp 0.7s cubic-bezier(0.32,0.72,0,1) forwards; }
 .fade-up-d2 { animation-delay: 0.05s; }
@@ -160,6 +227,7 @@ function closeDetail() { selectedAgent.value = null }
 .fade-up-d4 { animation-delay: 0.15s; }
 .fade-up-d5 { animation-delay: 0.2s; }
 .fade-up-d6 { animation-delay: 0.25s; }
+.fade-up-d7 { animation-delay: 0.3s; }
 .fade-up-d8 { animation-delay: 0.35s; }
 
 @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }

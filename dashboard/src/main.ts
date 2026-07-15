@@ -27,6 +27,7 @@ const router = createRouter({
     { path: '/templates', name: 'templates', component: () => import('./views/Templates.vue') },
     { path: '/teams', name: 'teams', component: () => import('./views/Teams.vue') },
     { path: '/console', name: 'console', component: () => import('./views/Console.vue') },
+    { path: '/flixz', name: 'flixz', component: () => import('./views/Flixz.vue') },
     { path: '/ops', name: 'ops', component: () => import('./views/OperatorRoom.vue') },
     { path: '/replay', name: 'replay', component: () => import('./views/Replay.vue') },
     { path: '/audit', name: 'audit', component: () => import('./views/AuditLog.vue') },

@@ -49,7 +49,7 @@ Opens the dashboard at `http://localhost:8420`. No login required in single-user
 
 ### System
 - **[Voice](/)** — system voice with intent parsing; per-agent voice workspace
-- **[Flixz](/agents)** — video frame extraction (ffmpeg) + optional vision descriptions
+- **[Flixz](/flixz)** — general frame extraction on the main dashboard (no agent); per-agent Flixz still on agent detail
 - **[Replay](/replay)** — zoomable timeline of session activity
 - **[File Manager](/agents)** — browse/upload/preview agent workspace files
 - **[YAML Editor](/settings)** — in-browser config editing
