@@ -72,8 +72,21 @@ async def get_session(session_id: str):
                         continue
                     try:
                         event = json.loads(line)
-                        # Only include user-visible messages
-                        if event.get("type") in ("message_start", "message_delta", "tool_call", "tool_result"):
+                        etype = event.get("type") or event.get("event") or ""
+                        # Include user-visible / reconstructable events for chat hydration
+                        if etype in (
+                            "message_start",
+                            "message_update",
+                            "message_end",
+                            "message_delta",
+                            "text_delta",
+                            "text_start",
+                            "text_end",
+                            "tool_call",
+                            "tool_result",
+                            "user_message",
+                            "assistant_message",
+                        ) or event.get("role") in ("user", "assistant") or event.get("message"):
                             messages.append(event)
                     except json.JSONDecodeError:
                         continue

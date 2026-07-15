@@ -34,8 +34,9 @@ async function loadMessages() {
     if (res.ok) {
       const sessions = await res.json()
       if (sessions && sessions.length > 0) {
-        currentSessionId.value = sessions[0].id
-        sessionName.value = sessions[0].name || ''
+        // Hydrate transcript for the most recent session (C2)
+        await switchSession(sessions[0].id)
+        return
       }
     }
   } catch {
@@ -147,20 +148,121 @@ async function send(text: string) {
   streaming.value = false
 }
 
+// ── Session history → chat bubbles ───────────────────────────────
+
+function extractTextFromEvent(event: any): string {
+  if (typeof event?.content === 'string') return event.content
+  if (Array.isArray(event?.content)) {
+    return event.content
+      .map((p: any) => (typeof p === 'string' ? p : p?.text || p?.content || ''))
+      .filter(Boolean)
+      .join('')
+  }
+  if (event?.message?.content) {
+    const c = event.message.content
+    if (typeof c === 'string') return c
+    if (Array.isArray(c)) {
+      return c.map((p: any) => p?.text || p?.content || '').filter(Boolean).join('')
+    }
+  }
+  if (event?.delta) return String(event.delta)
+  if (event?.text) return String(event.text)
+  return ''
+}
+
+function eventsToMessages(events: any[]): ChatMessage[] {
+  const out: ChatMessage[] = []
+  let agentText = ''
+  let agentTools: ToolCallBlock[] = []
+  let userText = ''
+
+  const flushAgent = () => {
+    if (agentText || agentTools.length) {
+      out.push({
+        role: 'agent',
+        textParts: agentText ? [agentText] : [],
+        toolBlocks: [...agentTools],
+        timestamp: Date.now(),
+      })
+      agentText = ''
+      agentTools = []
+    }
+  }
+  const flushUser = () => {
+    if (userText) {
+      out.push({
+        role: 'user',
+        textParts: [userText],
+        toolBlocks: [],
+        timestamp: Date.now(),
+      })
+      userText = ''
+    }
+  }
+
+  for (const event of events || []) {
+    const type = event?.type || event?.event || ''
+    const role = event?.role || event?.message?.role || event?.data?.role
+
+    if (type === 'tool_call' || (event?.tool_name && type !== 'tool_result')) {
+      flushUser()
+      agentTools.push({
+        type: 'tool_call',
+        name: event.tool_name || event.name || 'tool',
+        input: JSON.stringify(event.tool_input || event.input || {}).slice(0, 200),
+      })
+      continue
+    }
+    if (type === 'tool_result') {
+      agentTools.push({
+        type: 'tool_result',
+        name: event.tool_name || event.name || 'tool',
+        result: String(event.content || event.result || '').slice(0, 500),
+        truncated: String(event.content || event.result || '').length > 500,
+      })
+      continue
+    }
+
+    const text = extractTextFromEvent(event)
+    const isUser =
+      role === 'user' ||
+      type === 'user_message' ||
+      type === 'user' ||
+      (type === 'message_start' && role === 'user')
+
+    if (isUser && text) {
+      flushAgent()
+      userText += (userText ? '\n' : '') + text
+      continue
+    }
+
+    if (text && (role === 'assistant' || type.includes('text') || type.includes('message') || type === 'message_update')) {
+      flushUser()
+      agentText += text
+    }
+  }
+  flushUser()
+  flushAgent()
+  return out
+}
+
 // ── Session switching ────────────────────────────────────────────
 
-function switchSession(sessionId: string) {
+async function switchSession(sessionId: string) {
   currentSessionId.value = sessionId
   messages.value = []
   messagesLoading.value = true
-  // Reload messages for this session
-  fetch(`/api/sessions/${sessionId}`)
-    .then(r => r.json())
-    .then(data => {
-      sessionName.value = data.name || ''
-    })
-    .catch(() => {})
-    .finally(() => { messagesLoading.value = false })
+  try {
+    const res = await fetch(`/api/sessions/${sessionId}`)
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = await res.json()
+    sessionName.value = data.name || data.agent_name || ''
+    messages.value = eventsToMessages(data.messages || [])
+  } catch {
+    // Leave empty transcript if history cannot load
+  } finally {
+    messagesLoading.value = false
+  }
 }
 
 function newSession() {

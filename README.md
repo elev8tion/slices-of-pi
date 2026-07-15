@@ -148,7 +148,9 @@ cd pi-mcp-server && npm install && npm run dev
 
 | Package | Location | Role |
 |---------|----------|------|
-| **pi-orchestrator** | `pi_orchestrator/` | Runnable multi-agent manager API |
-| **slice-of-pi** | `slice_of_pi/` + root `pyproject.toml` | Architectural contracts only (not imported by the orchestrator) |
-| **slice-of-pi-dashboard** | `dashboard/` | Vue UI |
-| **pi-mcp-server** | `pi-mcp-server/` | MCP tools over orchestrator HTTP |
+| **pi-orchestrator** | `pi_orchestrator/` | **Runnable product** — multi-agent manager API |
+| **slice-of-pi-dashboard** | `dashboard/` | **Runnable product** — Vue UI |
+| **slice-of-pi** | `slice_of_pi/` + root `pyproject.toml` | Abstract ABCs only — **not imported** by the orchestrator; not required to run `./slices` |
+| **pi-mcp-server** | `pi-mcp-server/` | Optional local MCP STDIO bridge |
+
+Install/run the product via `./slices` or `start-orchestrator.py`. Do not confuse the root `slice-of-pi` contracts package with the live app.

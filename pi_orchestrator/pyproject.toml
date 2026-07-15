@@ -1,7 +1,7 @@
 [project]
 name = "pi-orchestrator"
 version = "0.1.0"
-description = "Pi Orchestrator — manage multiple pi coding agents with an API server and dashboard"
+description = "Pi Orchestrator — local single-operator API + dashboard for multiple pi coding agents (the runnable product; not SaaS)"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}

@@ -113,8 +113,10 @@ class TestGetSession:
 
         resp = await async_client.get(f"/api/sessions/{session['id']}")
         data = resp.json()
-        assert len(data["messages"]) == 2  # message_start and tool_call (message_update filtered)
+        # C2: message_update included for chat hydration (text deltas)
+        assert len(data["messages"]) == 3
         assert data["messages"][0]["type"] == "message_start"
+        assert data["messages"][1]["type"] == "message_update"
         assert data["messages"][-1]["type"] == "tool_call"
 
     async def test_get_session_missing_file(self, async_client, test_session):

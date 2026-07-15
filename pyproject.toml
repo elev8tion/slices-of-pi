@@ -1,7 +1,7 @@
 [project]
 name = "slice-of-pi"
 version = "0.1.0"
-description = "Architectural contract layer for a new agentic framework — abstract interfaces, ABCs, and Protocols"
+description = "Abstract contract package (ABCs/Protocols) for agent interfaces — NOT the runnable app. The product is pi_orchestrator + dashboard (local single-operator pi fleet manager). See docs/PRODUCT_INTENT.md."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -9,7 +9,7 @@ dependencies = [
 ]
 license = {text = "MIT"}
 authors = [{name = "Slice Of Pi"}]
-keywords = ["agent", "orchestration", "framework", "stubs", "interfaces"]
+keywords = ["agent", "orchestration", "framework", "stubs", "interfaces", "contracts"]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Developers",

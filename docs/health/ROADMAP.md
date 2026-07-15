@@ -27,15 +27,15 @@
 | **B4** | Warn in logs if `PI_ORCHESTRATOR_HOST` is not loopback | S | Log warning on non-127.0.0.1 bind | See TRACK_B_STATUS |
 | **B5** | Credentials: stop returning full plaintext on casual GET **or** document + gate for operator-only local | S | Values endpoint behavior matches docs | See TRACK_B_STATUS |
 
-## Track C — Local product polish
+## Track C — Local product polish — **DONE 2026-07-15**
 
 | ID | Work | Effort | Acceptance | Evidence |
 |----|------|--------|------------|----------|
-| **C1** | Mount or remove dead panels (McpKeys, YamlEditor, SlicesPanel, …) | S | No orphan components claiming features | INVENTORY |
-| **C2** | Chat history hydration on session switch | M | Switching session restores messages | FRONTEND |
-| **C3** | Scheduler uses same session path as managed chat | M | Cron runs produce same session layout | BACKEND P1 |
-| **C4** | Minimal CI: pytest unit + vite build on PR | M | `.github/workflows/ci.yml` green | TEST_REPORT CI=1 |
-| **C5** | Packaging note only: root vs pi-orchestrator identity in README (done-ish); optional pyproject clarify | S | New contributors not confused | CONTRACTS_VERDICT |
+| **C1** | Mount or remove dead panels (McpKeys, YamlEditor, SlicesPanel, …) | S | No orphan components claiming features | TRACK_C_STATUS |
+| **C2** | Chat history hydration on session switch | M | Switching session restores messages | TRACK_C_STATUS |
+| **C3** | Scheduler uses same session path as managed chat | M | Cron runs produce same session layout | TRACK_C_STATUS |
+| **C4** | Minimal CI: pytest unit + vite build on PR | M | `.github/workflows/ci.yml` green | TRACK_C_STATUS |
+| **C5** | Packaging note only: root vs pi-orchestrator identity in README (done-ish); optional pyproject clarify | S | New contributors not confused | TRACK_C_STATUS |
 
 ## Explicitly not on this roadmap
 
@@ -60,12 +60,14 @@ C1 → C2 → C3 → C4 → C5
 
 ## Definition of done for “healthy T1”
 
-- [ ] Unit pytest green (including credential paths)  
-- [ ] Live probe script or CI job documents `/health` + create + chat  
-- [ ] vue-tsc green or waived in package scripts  
-- [ ] No known P0 crash on daily operator paths  
-- [ ] PRODUCT_INTENT still binding; no SaaS docs revived  
+- [x] Unit pytest green (including credential paths)  
+- [x] Live probe / CI documents tests (`.github/workflows/ci.yml`)  
+- [x] vue-tsc green (Track A)  
+- [x] No known P0 crash on daily operator paths (Track A)  
+- [x] PRODUCT_INTENT still binding; no SaaS docs revived  
+
+Tracks A–C complete. See TRACK_A_STATUS / TRACK_B_STATUS / TRACK_C_STATUS.
 
 ---
 
-*Next orchestration step: implement Track A in small PRs, tests first.*
+*Optional next: operator UX polish only under PRODUCT_INTENT (local single-operator).*

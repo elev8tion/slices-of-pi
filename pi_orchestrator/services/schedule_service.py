@@ -2,21 +2,16 @@
 Pi Scheduler Service — cron-based recurring pi session execution.
 
 Uses APScheduler for cron parsing. Single-instance — no Redis distributed
-locking needed. Each schedule spawns a pi subprocess via the session service.
+locking needed. Each schedule runs through pi_session_service.stream_chat
+so sessions land in the same managed layout as interactive chat:
 
-Design:
-  - APScheduler with MemoryJobStore
-  - Loads enabled schedules from SQLite at startup
-  - Re-evaluates schedules every POLL_INTERVAL seconds
-  - Each execution runs pi --mode json --print "<message>"
-  - Execution results tracked in schedule_executions table
+  ~/.pi/agent/sessions/managed/<agent_name>/<session_id>.jsonl
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timezone
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -82,7 +77,11 @@ class PiScheduler:
                     self._scheduler.remove_job(job_id)
                 continue
 
-            trigger = CronTrigger.from_crontab(schedule["cron_expression"])
+            try:
+                trigger = CronTrigger.from_crontab(schedule["cron_expression"])
+            except Exception:
+                logger.exception("Invalid cron for schedule %s", job_id[:12])
+                continue
 
             if job_id in existing_jobs:
                 self._scheduler.reschedule_job(job_id, trigger=trigger)
@@ -90,68 +89,76 @@ class PiScheduler:
                 self._scheduler.add_job(
                     self._execute_schedule,
                     trigger=trigger,
-                    args=[schedule],
+                    args=[schedule["id"]],
                     id=job_id,
                     replace_existing=True,
                 )
 
-    async def _execute_schedule(self, schedule: dict) -> None:
-        """Execute a scheduled pi session asynchronously."""
+    async def _execute_schedule(self, schedule_id: str) -> None:
+        """Execute a scheduled run via the same stream_chat path as the UI."""
+        schedule = db.get_schedule(schedule_id)
+        if not schedule or not schedule.get("enabled"):
+            return
+
         execution_id = db.record_schedule_execution_start(schedule["id"])
-        logger.info(f"Schedule {schedule['id'][:12]} executing: {schedule['message'][:60]}")
+        agent_id = schedule["agent_id"]
+        agent = db.get_agent(agent_id)
+        if not agent:
+            db.record_schedule_execution_end(
+                execution_id, "failed", error_message="Agent not found"
+            )
+            return
+
+        logger.info(
+            "Schedule %s executing for agent %s: %s",
+            schedule["id"][:12],
+            agent.get("name"),
+            (schedule.get("message") or "")[:60],
+        )
 
         try:
-            # Build pi command
-            cmd = ["pi", "--mode", "json", "--print"]
+            # Import here to avoid circular import at module load
+            from ..services.pi_session_service import stream_chat
 
-            agent = db.get_agent(schedule["agent_id"])
-            if agent:
-                tools = agent.get("tools", "[]")
-                if isinstance(tools, str):
-                    import json
-                    tools = json.loads(tools)
-                cmd.extend(["--tools", ",".join(tools)])
+            had_error = False
+            error_msg = None
+            async for chunk in stream_chat(
+                agent_id=agent_id,
+                prompt=schedule["message"],
+                model=schedule.get("model") or agent.get("model") or None,
+                timeout_seconds=schedule.get("timeout_seconds") or 900,
+            ):
+                if chunk.get("type") == "error":
+                    had_error = True
+                    error_msg = (chunk.get("content") or "stream error")[:500]
 
-            model = schedule.get("model") or (agent["model"] if agent else "claude-sonnet-4-5")
-            cmd.extend(["--model", model, schedule["message"]])
+            # Latest session for this agent is the one stream_chat just created
+            sessions = db.list_sessions(agent_id=agent_id, limit=1)
+            session_id = sessions[0]["id"] if sessions else None
 
-            proc = await asyncio.create_subprocess_exec(
-                *cmd,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-            )
-
-            try:
-                stdout, stderr = await asyncio.wait_for(
-                    proc.communicate(),
-                    timeout=schedule.get("timeout_seconds", 900),
-                )
-
-                if proc.returncode == 0:
-                    db.record_schedule_execution_end(
-                        execution_id, "success",
-                        exit_code=proc.returncode,
-                    )
-                else:
-                    stderr_text = stderr.decode()[:500] if stderr else ""
-                    db.record_schedule_execution_end(
-                        execution_id, "failed",
-                        exit_code=proc.returncode,
-                        error_message=stderr_text,
-                    )
-
-            except asyncio.TimeoutError:
-                proc.kill()
-                await proc.wait()
+            if had_error:
                 db.record_schedule_execution_end(
-                    execution_id, "timeout",
-                    error_message="Execution timed out",
+                    execution_id,
+                    "failed",
+                    session_id=session_id,
+                    error_message=error_msg,
+                )
+            else:
+                db.record_schedule_execution_end(
+                    execution_id,
+                    "success",
+                    session_id=session_id,
+                    exit_code=0,
                 )
 
-        except Exception as e:
+        except asyncio.TimeoutError:
             db.record_schedule_execution_end(
-                execution_id, "failed",
-                error_message=str(e)[:500],
+                execution_id, "timeout", error_message="Execution timed out"
+            )
+        except Exception as e:
+            logger.exception("Schedule %s failed", schedule_id[:12])
+            db.record_schedule_execution_end(
+                execution_id, "failed", error_message=str(e)[:500]
             )
 
 
