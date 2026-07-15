@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { toastBus } from '@/main'
+import { useNotificationStore } from '@/stores/notifications'
 
 export interface Agent {
   id: string
@@ -71,10 +72,48 @@ export const useAppStore = defineStore('app', () => {
       const res = await fetch(`/api/agents/${id}`, { method: 'DELETE' })
       if (res.ok) {
         agents.value = agents.value.filter(a => a.id !== id)
+        toastBus.success('Agent deleted')
         return true
       }
     } catch { /* silent */ }
     return false
+  }
+
+  async function createAgent(config: {
+    name: string
+    model?: string
+    tools?: string[]
+    skills?: string[]
+  }): Promise<Agent | null> {
+    const name = (config.name || '').trim()
+    if (!/^[a-zA-Z0-9_-]+$/.test(name) || name.length < 1 || name.length > 64) {
+      toastBus.error('Name: letters, numbers, _ or - only (max 64)')
+      return null
+    }
+    try {
+      const res = await fetch('/api/agents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          model: config.model || '',
+          tools: config.tools || ['read', 'bash', 'web_search'],
+          skills: config.skills || [],
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        toastBus.error(err.detail || 'Failed to create agent')
+        return null
+      }
+      const agent = await res.json()
+      await fetchAgents()
+      toastBus.success(`Created local agent: ${agent.name}`)
+      return agent
+    } catch {
+      toastBus.error('Failed to create agent')
+      return null
+    }
   }
 
   async function fetchActivities() {
@@ -85,14 +124,28 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function connectWebSocket() {
+    if (ws.value && (ws.value.readyState === WebSocket.OPEN || ws.value.readyState === WebSocket.CONNECTING)) {
+      return
+    }
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
     const socket = new WebSocket(`${protocol}//${location.host}/ws/events`)
     socket.onopen = () => { connected.value = true }
-    socket.onclose = () => { connected.value = false; setTimeout(connectWebSocket, 3000) }
+    socket.onclose = () => {
+      connected.value = false
+      ws.value = null
+      setTimeout(connectWebSocket, 3000)
+    }
     socket.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data)
-        if (data.type === 'agent_created' || data.type === 'agent_deleted') fetchAgents()
+        // D4 — operator notifications / toasts
+        try {
+          useNotificationStore().handleWsEvent(data)
+        } catch { /* store may not be ready */ }
+
+        if (data.type === 'agent_created' || data.type === 'agent_deleted' || data.type === 'agent_updated') {
+          fetchAgents()
+        }
         fetchActivities()
       } catch { /* silent */ }
     }
@@ -102,7 +155,7 @@ export const useAppStore = defineStore('app', () => {
   return {
     agents, activities, connected, sidebarCollapsed,
     onlineAgents, busyAgents, errorAgents,
-    fetchAgents, fetchAgentDetail, deleteAgent,
+    fetchAgents, fetchAgentDetail, createAgent, deleteAgent,
     fetchActivities, connectWebSocket, toggleSidebar,
   }
 })

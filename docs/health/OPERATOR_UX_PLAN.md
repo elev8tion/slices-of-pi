@@ -1,5 +1,6 @@
-# Operator UX Plan — Track D (optional)
+# Operator UX Plan — Track D
 
+**Status:** **IMPLEMENTED** — see [TRACK_D_STATUS.md](./TRACK_D_STATUS.md)  
 **Authority:** [PRODUCT_INTENT.md](../PRODUCT_INTENT.md) — local single-operator only.  
 **Prerequisite:** Tracks A–C complete.  
 **Not in scope:** SaaS, multi-tenant, enterprise channels, cloud control plane.
@@ -158,18 +159,14 @@ D3 last because it may need a small backend allowlist; the rest are frontend-fir
 
 ## Definition of done for Track D
 
-- [ ] CapacityMeter mounted usefully  
-- [ ] ResourceModal can create a local agent end-to-end  
-- [ ] YamlEditor either mounted for orchestrator config **or** marked library-only with comment  
-- [ ] PRODUCT_INTENT unchanged  
-- [ ] Tests/CI still green  
+- [x] CapacityMeter mounted usefully  
+- [x] ResourceModal can create a local agent end-to-end  
+- [x] YamlEditor mounted for orchestrator config (fixed path API)  
+- [x] PRODUCT_INTENT unchanged  
+- [x] Tests/CI still green  
 
 ---
 
-## Decision needed from owner (optional)
+## Owner decision (recorded)
 
-1. **ResourceModal** vs keep Templates as sole create path?  
-2. **YamlEditor** for orchestrator.json only, or also persona templates?  
-3. Implement Track D now, or park after doc refresh?
-
-*Default if no answer: D4 → D1 → D2 → D5; defer D3 until file-write API is agreed.*
+Implemented per owner choice **B** with recommended order D4 → D1 → D2 → D5 → D3.

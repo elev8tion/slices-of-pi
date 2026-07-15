@@ -14,8 +14,9 @@
 | **B** | Harden (localhost) | **Done** | [TRACK_B_STATUS.md](./TRACK_B_STATUS.md) |
 | **C** | Local polish | **Done** | [TRACK_C_STATUS.md](./TRACK_C_STATUS.md) |
 | Flixz general | Operator tool on dashboard | **Done** | `/flixz` + nav + dashboard card |
+| **D** | Operator UX | **Done** | [TRACK_D_STATUS.md](./TRACK_D_STATUS.md) |
 
-## Where we are (post A–C)
+## Where we are (post A–D)
 
 | Dimension | Score (1–5) | Evidence |
 |-----------|-------------|----------|
@@ -28,7 +29,8 @@
 | Docs / intent clarity | **5** | PRODUCT_INTENT + AGENTS + track statuses |
 | Packaging clarity | **4** | Dual package explained (C5) |
 | CI | **5** | `.github/workflows/ci.yml` (C4) |
-| **Overall (T1)** | **~5** | **Stabilize → harden → polish complete for T1 bar** |
+| Operator UX (D) | **5** | CapacityMeter, create modal, config editor, toasts |
+| **Overall (T1)** | **~5** | **A–D complete under local single-operator intent** |
 
 ## Closed risks (were P0/P1 at audit)
 
@@ -63,6 +65,6 @@
 
 See [TARGET.md](./TARGET.md) and [PRODUCT_INTENT.md](../PRODUCT_INTENT.md).
 
-## Next (optional Track D — operator UX)
+## Next
 
-Plan only: [OPERATOR_UX_PLAN.md](./OPERATOR_UX_PLAN.md) — wire CapacityMeter / ResourceModal / YamlEditor under local operator UX. Not required for T1 health bar.
+Tracks A–D complete. Further changes: only when you feel a concrete local-operator friction. PRODUCT_INTENT remains binding.

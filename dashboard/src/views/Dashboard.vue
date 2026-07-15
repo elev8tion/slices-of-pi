@@ -12,18 +12,42 @@ import OpsQueue from '@/components/OpsQueue.vue'
 import ComsPanel from '@/components/ComsPanel.vue'
 import TagCloud from '@/components/TagCloud.vue'
 import SectionBar from '@/components/SectionBar.vue'
+import CapacityMeter from '@/components/CapacityMeter.vue'
+import ResourceModal from '@/components/ResourceModal.vue'
+import { toastBus } from '@/main'
 
 const store = useAppStore()
+const showCreate = ref(false)
+const selectedAgent = ref<Agent | null>(null)
+const host = ref<{
+  cpu?: { percent: number }
+  memory?: { used_gb: number; total_gb: number; percent: number }
+  disk?: { used_gb: number; total_gb: number; percent: number }
+} | null>(null)
 
 onMounted(() => {
   store.fetchAgents()
   store.fetchActivities()
   store.connectWebSocket()
+  fetchHost()
 })
 
-const selectedAgent = ref<Agent | null>(null)
+async function fetchHost() {
+  try {
+    const res = await fetch('/api/telemetry/host')
+    if (res.ok) host.value = await res.json()
+  } catch { /* optional */ }
+}
+
 function openDetail(agent: Agent) { selectedAgent.value = agent }
 function closeDetail() { selectedAgent.value = null }
+
+async function onCreateAgent(config: { name: string; model: string; tools: string[]; skills: string[] }) {
+  const agent = await store.createAgent(config)
+  if (agent) {
+    selectedAgent.value = agent
+  }
+}
 </script>
 
 <template>
@@ -34,28 +58,64 @@ function closeDetail() { selectedAgent.value = null }
       <!-- Header -->
       <div class="dash-header fade-up fade-up-d2">
         <div class="dash-title">
-          <h1>Slices Overview</h1>
-          <p>{{ store.agents.length }} agents &middot; {{ store.onlineAgents }} online &middot; {{ store.errorAgents }} alerts</p>
+          <h1>Local operator overview</h1>
+          <p>{{ store.agents.length }} agents · {{ store.onlineAgents }} online · {{ store.errorAgents }} alerts</p>
         </div>
         <div class="dash-actions gap-2">
           <router-link to="/flixz" class="btn btn-secondary" title="General frame extraction — no agent required">
             <span>🎞 Flixz</span>
           </router-link>
-          <router-link to="/templates" class="btn btn-secondary">
-            <span>New Agent</span>
-          </router-link>
+          <button type="button" class="btn btn-secondary" @click="showCreate = true">
+            + New agent
+          </button>
+        </div>
+      </div>
+
+      <!-- Capacity (D1) -->
+      <div class="capacity-row fade-up fade-up-d3">
+        <div class="capacity-card">
+          <div class="capacity-card-title">Agents online</div>
+          <CapacityMeter
+            :used="store.onlineAgents"
+            :total="Math.max(store.agents.length, 1)"
+            label="online"
+          />
+        </div>
+        <div v-if="host?.memory" class="capacity-card">
+          <div class="capacity-card-title">Host RAM</div>
+          <CapacityMeter
+            :used="Math.round(host.memory.used_gb * 10) / 10"
+            :total="Math.round(host.memory.total_gb * 10) / 10"
+            label="GB"
+          />
+        </div>
+        <div v-if="host?.disk" class="capacity-card">
+          <div class="capacity-card-title">Host disk</div>
+          <CapacityMeter
+            :used="Math.round(host.disk.used_gb)"
+            :total="Math.round(host.disk.total_gb)"
+            label="GB"
+          />
+        </div>
+        <div v-if="host?.cpu" class="capacity-card">
+          <div class="capacity-card-title">Host CPU</div>
+          <CapacityMeter
+            :used="Math.round(host.cpu.percent)"
+            :total="100"
+            label="%"
+          />
         </div>
       </div>
 
       <!-- Stats Row -->
       <div class="stats-row fade-up fade-up-d3">
-        <StatCard label="Agents Online" :value="store.onlineAgents" trend="+2" :sub="`of ${store.agents.length} registered`" />
-        <StatCard label="Active Sessions" :value="store.busyAgents" trend="+3" sub="concurrent" />
+        <StatCard label="Agents Online" :value="store.onlineAgents" :sub="`of ${store.agents.length} registered`" />
+        <StatCard label="Busy now" :value="store.busyAgents" sub="concurrent sessions" />
         <StatCard label="Total Tokens" :value="store.agents.reduce((s, a) => s + a.tokens_used, 0).toLocaleString()" sub="cumulative" />
-        <StatCard label="Uptime" value="99.8%" sub="7d avg" />
+        <StatCard label="Connection" :value="store.connected ? 'Live' : '…'" sub="event bus" />
       </div>
 
-      <!-- General Flixz entry — operator tool, separate from per-agent Flixz -->
+      <!-- General Flixz entry -->
       <router-link to="/flixz" class="flixz-dash-card fade-up fade-up-d4">
         <div class="flixz-dash-icon">🎞</div>
         <div class="flixz-dash-copy">
@@ -68,11 +128,9 @@ function closeDetail() { selectedAgent.value = null }
         <span class="flixz-dash-cta">Open →</span>
       </router-link>
 
-      <!-- Tag Cloud -->
       <TagCloud class="fade-up fade-up-d5" />
 
-      <!-- Agent Grid -->
-      <SectionBar title="Active Agents" class="fade-up fade-up-d6" />
+      <SectionBar title="Your agents" class="fade-up fade-up-d6" />
       <div class="agent-grid fade-up fade-up-d7">
         <AgentCard
           v-for="agent in store.agents"
@@ -80,16 +138,19 @@ function closeDetail() { selectedAgent.value = null }
           :agent="agent"
           @click="openDetail(agent)"
         />
-        <div v-if="store.agents.length === 0" class="agent-card header-card flex items-center justify-center text-center" style="grid-column: 1 / -1;">
-          <div>
-            <div class="text-4xl mb-2 opacity-30">+</div>
-            <div class="text-sm font-semibold text-text-secondary">Deploy Your First Agent</div>
-            <div class="text-xs text-text-tertiary mt-1">from a template or create custom</div>
-          </div>
-        </div>
+        <button
+          v-if="store.agents.length === 0"
+          type="button"
+          class="agent-card header-card empty-cta"
+          style="grid-column: 1 / -1;"
+          @click="showCreate = true"
+        >
+          <div class="text-4xl mb-2 opacity-30">+</div>
+          <div class="text-sm font-semibold text-text-secondary">Create your first local agent</div>
+          <div class="text-xs text-text-tertiary mt-1">Opens create dialog — runs as a pi process on this machine</div>
+        </button>
       </div>
 
-      <!-- Bottom Row -->
       <div class="bottom-row fade-up fade-up-d8">
         <ActivityFeed :activities="store.activities" />
         <OpsQueue :agents="store.agents" />
@@ -98,6 +159,7 @@ function closeDetail() { selectedAgent.value = null }
     </main>
   </div>
   <AgentDetail :agent="selectedAgent" @close="closeDetail" />
+  <ResourceModal v-model:show="showCreate" @create="onCreateAgent" />
 </template>
 
 <style scoped>
@@ -110,10 +172,7 @@ function closeDetail() { selectedAgent.value = null }
   margin-left: auto;
   margin-right: auto;
 }
-.main {
-  flex: 1;
-  min-width: 0;
-}
+.main { flex: 1; min-width: 0; }
 .dash-header {
   display: flex;
   align-items: center;
@@ -133,6 +192,25 @@ function closeDetail() { selectedAgent.value = null }
   font-weight: 500;
   margin-top: 2px;
 }
+.dash-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.capacity-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.capacity-card {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.capacity-card-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.4);
+  margin-bottom: 8px;
+}
 .stats-row {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -150,6 +228,16 @@ function closeDetail() { selectedAgent.value = null }
   border-color: rgba(157,213,34,0.12);
   min-height: 120px;
 }
+.empty-cta {
+  border: 1px dashed rgba(157,213,34,0.25);
+  cursor: pointer;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+}
+.empty-cta:hover {
+  background: rgba(157,213,34,0.1);
+}
 .bottom-row {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -166,6 +254,7 @@ function closeDetail() { selectedAgent.value = null }
   font-family: inherit;
   border: none;
   text-decoration: none;
+  cursor: pointer;
   transition: all 0.4s cubic-bezier(0.32,0.72,0,1);
 }
 .btn-secondary {
@@ -194,15 +283,8 @@ function closeDetail() { selectedAgent.value = null }
   border-color: rgba(157, 213, 34, 0.4);
   transform: translateY(-1px);
 }
-.flixz-dash-icon {
-  font-size: 28px;
-  line-height: 1;
-  flex-shrink: 0;
-}
-.flixz-dash-copy {
-  flex: 1;
-  min-width: 0;
-}
+.flixz-dash-icon { font-size: 28px; line-height: 1; flex-shrink: 0; }
+.flixz-dash-copy { flex: 1; min-width: 0; }
 .flixz-dash-title {
   font-size: 14px;
   font-weight: 600;

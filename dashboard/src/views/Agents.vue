@@ -4,13 +4,13 @@ import { useAppStore, type Agent } from '@/stores/app'
 import NavIsland from '@/components/NavIsland.vue'
 import Sidebar from '@/components/Sidebar.vue'
 import AgentDetail from '@/components/AgentDetail.vue'
+import ResourceModal from '@/components/ResourceModal.vue'
 
 const store = useAppStore()
 const selectedAgent = ref<Agent | null>(null)
 const search = ref('')
 const statusFilter = ref('')
 const showCreate = ref(false)
-const newName = ref('')
 
 const filteredAgents = computed(() => {
   let list = store.agents
@@ -27,21 +27,13 @@ onMounted(() => {
   store.connectWebSocket()
 })
 
-async function createAgent() {
-  if (!newName.value.trim()) return
-  await fetch('/api/agents', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name: newName.value.trim() }),
-  })
-  newName.value = ''
-  showCreate.value = false
-  store.fetchAgents()
+async function onCreateAgent(config: { name: string; model: string; tools: string[]; skills: string[] }) {
+  const agent = await store.createAgent(config)
+  if (agent) selectedAgent.value = agent
 }
 
 async function deleteAgent(id: string) {
-  await fetch(`/api/agents/${id}`, { method: 'DELETE' })
-  store.fetchAgents()
+  await store.deleteAgent(id)
 }
 
 const statusColors: Record<string, string> = {
@@ -64,17 +56,9 @@ const statusColors: Record<string, string> = {
           <h1>Agents</h1>
           <p>{{ store.agents.length }} total · {{ store.onlineAgents }} online</p>
         </div>
-        <button class="btn-primary" @click="showCreate = !showCreate">
-          + New Agent
+        <button class="btn-primary" @click="showCreate = true">
+          + New agent
         </button>
-      </div>
-
-      <!-- Create form -->
-      <div v-if="showCreate" class="card p-4 mb-4 flex items-center gap-3">
-        <input v-model="newName" @keyup.enter="createAgent" placeholder="Agent name..."
-          class="input-base flex-1 text-sm" />
-        <button @click="createAgent" class="btn-primary text-xs px-4 py-2">Create</button>
-        <button @click="showCreate = false" class="text-xs text-text-tertiary hover:text-text-secondary">Cancel</button>
       </div>
 
       <!-- Filters -->
@@ -91,7 +75,10 @@ const statusColors: Record<string, string> = {
 
       <!-- Agent list -->
       <div v-if="store.agents.length === 0" class="card p-8 text-center text-text-tertiary text-sm">
-        No agents yet. Create one above.
+        <p class="mb-3">No local agents yet.</p>
+        <button type="button" class="btn-primary text-xs px-4 py-2" @click="showCreate = true">
+          Create your first agent
+        </button>
       </div>
 
       <div v-else class="flex flex-col gap-2">
@@ -120,6 +107,7 @@ const statusColors: Record<string, string> = {
     </main>
   </div>
   <AgentDetail :agent="selectedAgent" @close="selectedAgent = null" />
+  <ResourceModal v-model:show="showCreate" @create="onCreateAgent" />
 </template>
 
 <style scoped>

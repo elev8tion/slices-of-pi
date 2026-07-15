@@ -15,9 +15,9 @@
 | **B** | Harden (localhost) | **DONE** | [TRACK_B_STATUS.md](./TRACK_B_STATUS.md) |
 | **C** | Local polish | **DONE** | [TRACK_C_STATUS.md](./TRACK_C_STATUS.md) |
 | Flixz general | Dashboard operator tool | **DONE** | `/flixz` route + nav |
-| **D** | Operator UX (optional) | **PLANNED** | [OPERATOR_UX_PLAN.md](./OPERATOR_UX_PLAN.md) |
+| **D** | Operator UX | **DONE** | [TRACK_D_STATUS.md](./TRACK_D_STATUS.md) · [OPERATOR_UX_PLAN.md](./OPERATOR_UX_PLAN.md) |
 
-**T1 health bar:** met. Further work is optional operator UX under PRODUCT_INTENT only.
+**T1 health bar:** met. Tracks A–D complete under PRODUCT_INTENT.
 
 ---
 
@@ -52,17 +52,17 @@
 | C4 | GitHub CI | Done |
 | C5 | Packaging / README clarity | Done |
 
-## Track D — Operator UX — **PLANNED (optional)**
+## Track D — Operator UX — **DONE 2026-07-15**
 
-See [OPERATOR_UX_PLAN.md](./OPERATOR_UX_PLAN.md).
+See [TRACK_D_STATUS.md](./TRACK_D_STATUS.md) and [OPERATOR_UX_PLAN.md](./OPERATOR_UX_PLAN.md).
 
-| ID | Work | Priority |
-|----|------|----------|
-| D4 | Wire notifications store to WS events | S first |
-| D1 | Mount CapacityMeter (dashboard/settings + telemetry) | S |
-| D2 | ResourceModal as New Agent flow | M |
-| D5 | Empty-state / copy polish | S |
-| D3 | YamlEditor for local orchestrator config (safe write) | M last |
+| ID | Work | Status |
+|----|------|--------|
+| D4 | Wire notifications store to WS events | Done |
+| D1 | Mount CapacityMeter (dashboard/settings + telemetry) | Done |
+| D2 | ResourceModal as New Agent flow | Done |
+| D5 | Empty-state / copy polish | Done |
+| D3 | YamlEditor for local orchestrator config (safe write) | Done |
 
 ---
 

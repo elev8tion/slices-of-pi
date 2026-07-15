@@ -83,8 +83,15 @@ function reset() {
 }
 
 function handleCreate() {
+  const name = agentName.value.trim()
+  if (!name) {
+    return
+  }
+  if (!/^[a-zA-Z0-9_-]+$/.test(name) || name.length > 64) {
+    return
+  }
   emit('create', {
-    name: agentName.value.trim() || `agent-${Date.now()}`,
+    name,
     model: selectedModel.value,
     tools: [...selectedTools.value],
     skills: [...selectedSkills.value],
@@ -92,6 +99,11 @@ function handleCreate() {
   reset()
   show.value = false
 }
+
+const nameValid = computed(() => {
+  const n = agentName.value.trim()
+  return n.length > 0 && n.length <= 64 && /^[a-zA-Z0-9_-]+$/.test(n)
+})
 
 function handleClose() {
   reset()
@@ -106,12 +118,16 @@ function handleClose() {
       <div class="resource-panel" @click.stop>
         <!-- Header -->
         <div class="resource-header">
-          <h2 class="resource-title">Estimate Resources</h2>
+          <h2 class="resource-title">Create local agent</h2>
           <button class="resource-close" @click="handleClose">✕</button>
         </div>
 
         <!-- Form -->
         <div class="resource-body">
+          <p class="resource-hint">
+            Runs as a <strong>pi</strong> process on this machine — not a cloud container.
+            Soft estimates below are guidance only.
+          </p>
           <!-- Agent Name -->
           <div class="resource-field">
             <label class="resource-label">Agent Name</label>
@@ -120,6 +136,7 @@ function handleClose() {
               placeholder="e.g. my-agent"
               class="resource-input"
             />
+            <p class="resource-field-hint">Letters, numbers, _ or - only (max 64).</p>
           </div>
 
           <!-- Model -->
@@ -168,30 +185,31 @@ function handleClose() {
             </div>
           </div>
 
-          <!-- Estimates -->
+          <!-- Soft estimates (not isolation quotas) -->
+          <div class="estimates-label">Soft estimates (hints only)</div>
           <div class="estimates-grid">
             <div class="estimate-card">
               <div class="estimate-icon" style="background: rgba(157,213,34,0.12); color: #9DD522;">🧠</div>
               <div class="estimate-value">{{ estimatedRam }}<span class="estimate-unit"> MB</span></div>
-              <div class="estimate-label">RAM</div>
+              <div class="estimate-label">~RAM hint</div>
             </div>
             <div class="estimate-card">
               <div class="estimate-icon" style="background: rgba(34,197,94,0.12); color: #22C55E;">💾</div>
               <div class="estimate-value">{{ estimatedDisk }}<span class="estimate-unit"> MB</span></div>
-              <div class="estimate-label">Disk</div>
+              <div class="estimate-label">~Disk hint</div>
             </div>
             <div class="estimate-card">
               <div class="estimate-icon" style="background: rgba(245,158,11,0.12); color: #F59E0B;">📐</div>
               <div class="estimate-value">{{ (contextWindow / 1000).toFixed(0) }}<span class="estimate-unit">K</span></div>
-              <div class="estimate-label">Context Window</div>
+              <div class="estimate-label">Context (model)</div>
             </div>
           </div>
         </div>
 
         <!-- Footer -->
         <div class="resource-footer">
-          <button class="btn-secondary" @click="handleClose">Close</button>
-          <button class="btn-primary" @click="handleCreate">Create Agent</button>
+          <button class="btn-secondary" @click="handleClose">Cancel</button>
+          <button class="btn-primary" :disabled="!nameValid" @click="handleCreate">Create agent</button>
         </div>
       </div>
     </div>
@@ -242,6 +260,26 @@ function handleClose() {
   font-size: 17px;
   font-weight: 600;
   color: #F0F0F2;
+}
+.resource-hint {
+  font-size: 12px;
+  color: rgba(255,255,255,0.35);
+  line-height: 1.4;
+  margin-bottom: 14px;
+}
+.resource-hint strong { color: rgba(211,237,47,0.85); font-weight: 600; }
+.resource-field-hint {
+  font-size: 10px;
+  color: rgba(255,255,255,0.28);
+  margin-top: 4px;
+}
+.estimates-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(255,255,255,0.3);
+  margin-bottom: 8px;
 }
 .resource-close {
   width: 34px;
