@@ -4,6 +4,7 @@ Run with:
     pytest tests/test_e2e_api.py -v
 
 Requires the orchestrator running on localhost:8420 with PI_NO_AUTH=1.
+When the server is not up, the whole module is skipped (integration suite).
 """
 
 import json
@@ -13,6 +14,21 @@ import urllib.error
 import pytest
 
 BASE = "http://127.0.0.1:8420"
+
+
+def _server_up() -> bool:
+    try:
+        with urllib.request.urlopen(f"{BASE}/health", timeout=1.5) as resp:
+            return resp.status == 200
+    except Exception:
+        return False
+
+
+# Skip entire module unless a live orchestrator is available (Track A A6 harness).
+pytestmark = pytest.mark.skipif(
+    not _server_up(),
+    reason="Live e2e requires orchestrator on localhost:8420 (PI_NO_AUTH=1). Start with ./slices or start-orchestrator.py.",
+)
 
 
 def req(method, path, body=None):

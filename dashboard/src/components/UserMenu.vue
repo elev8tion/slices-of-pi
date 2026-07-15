@@ -153,19 +153,25 @@ function close() {
 
 <script lang="ts">
 // v-click-outside directive
+type ElWithClickOutside = HTMLElement & { _clickOutside?: (event: Event) => void }
+
 export default {
   directives: {
     clickOutside: {
       mounted(el: HTMLElement, binding: any) {
-        el._clickOutside = (event: Event) => {
+        const node = el as ElWithClickOutside
+        node._clickOutside = (event: Event) => {
           if (!el.contains(event.target as Node)) {
             binding.value()
           }
         }
-        document.addEventListener('click', el._clickOutside)
+        document.addEventListener('click', node._clickOutside)
       },
       unmounted(el: HTMLElement) {
-        document.removeEventListener('click', el._clickOutside)
+        const node = el as ElWithClickOutside
+        if (node._clickOutside) {
+          document.removeEventListener('click', node._clickOutside)
+        }
       }
     }
   }

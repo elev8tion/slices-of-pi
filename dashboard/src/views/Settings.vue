@@ -7,7 +7,7 @@ const health = ref<Record<string, any>>({})
 
 onMounted(async () => {
   try {
-    const res = await fetch('/api/health')
+    const res = await fetch('/health')
     health.value = await res.json()
   } catch (e) { /* ignore */ }
 })

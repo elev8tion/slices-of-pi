@@ -26,8 +26,20 @@ const ttsProvider = ref<'browser' | 'mossy'>('browser')
 const mossyAvailable = ref(false)
 const ttsAudioEl = ref<HTMLAudioElement | null>(null)
 
-// Speech recognition
-let recognition: SpeechRecognition | null = null
+// Speech recognition (browser APIs; not always in TS lib)
+type BrowserSpeechRecognition = {
+  continuous: boolean
+  interimResults: boolean
+  lang: string
+  onresult: ((event: any) => void) | null
+  onerror: ((event: any) => void) | null
+  onend: (() => void) | null
+  start: () => void
+  stop: () => void
+  abort?: () => void
+}
+
+let recognition: BrowserSpeechRecognition | null = null
 let synth: SpeechSynthesis | null = null
 let currentUtterance: SpeechSynthesisUtterance | null = null
 let ws: WebSocket | null = null
@@ -100,12 +112,13 @@ function initSpeech() {
   }
 
   synth = window.speechSynthesis
-  recognition = new SpeechRecognition()
-  recognition.continuous = true
-  recognition.interimResults = true
-  recognition.lang = 'en-US'
+  const rec: BrowserSpeechRecognition = new SpeechRecognition()
+  recognition = rec
+  rec.continuous = true
+  rec.interimResults = true
+  rec.lang = 'en-US'
 
-  recognition.onresult = (event: SpeechRecognitionEvent) => {
+  rec.onresult = (event: any) => {
     let finalText = ''
     let interimText = ''
 
@@ -125,7 +138,7 @@ function initSpeech() {
     }
   }
 
-  recognition.onerror = (event: any) => {
+  rec.onerror = (event: any) => {
     console.error('[Voice] Recognition error:', event.error)
     if (event.error === 'not-allowed') {
       errorMsg.value = 'Microphone access denied. Allow mic access and try again.'
@@ -134,7 +147,7 @@ function initSpeech() {
     } else if (event.error === 'no-speech') {
       // No speech detected, just restart silently
       if (isListening.value) {
-        try { recognition?.start() } catch { /* ignore */ }
+        try { rec.start() } catch { /* ignore */ }
       }
     } else {
       errorMsg.value = `Speech error: ${event.error}`
@@ -143,10 +156,10 @@ function initSpeech() {
     }
   }
 
-  recognition.onend = () => {
+  rec.onend = () => {
     if (isListening.value) {
       // Restart if we're still supposed to be listening
-      try { recognition?.start() } catch { /* ignore */ }
+      try { rec.start() } catch { /* ignore */ }
     }
   }
 

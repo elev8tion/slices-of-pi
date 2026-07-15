@@ -11,6 +11,7 @@ export const toastBus = {
   info(msg: string) { this._add?.(msg, 'info') },
   success(msg: string) { this._add?.(msg, 'success') },
   error(msg: string) { this._add?.(msg, 'error') },
+  warning(msg: string) { this._add?.(msg, 'warning') },
 }
 
 const router = createRouter({

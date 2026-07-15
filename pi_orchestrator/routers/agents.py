@@ -14,6 +14,7 @@ from ..models import (
     PiAgentConfig,
     PiAgentSummary,
     PiAgentDetail,
+    PiAgentUpdate,
 )
 from ..services.pi_session_service import (
     create_agent as create_agent_service,
@@ -122,6 +123,36 @@ async def get_agent(agent_id: str):
     agent = await get_status(agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
+    return _agent_to_detail(agent)
+
+
+@router.patch("/{agent_id}", response_model=PiAgentDetail)
+async def patch_agent(agent_id: str, body: PiAgentUpdate):
+    """Partially update an agent's configuration."""
+    existing = db.get_agent(agent_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    data = body.model_dump(exclude_unset=True)
+    # Drop UI-only fields not stored on agents table
+    data.pop("auto_compact", None)
+    data.pop("context_window", None)
+
+    schedule = data.pop("schedule", None)
+    if schedule is not None:
+        data["schedule_cron"] = schedule
+
+    if not data:
+        agent = await get_status(agent_id)
+        return _agent_to_detail(agent)
+
+    updated = db.update_agent(agent_id, **data)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    await event_bus.publish("agent_updated", {"agent_id": agent_id, "name": updated.get("name")})
+    db.record_activity(agent_id, "agent_updated", updated.get("name"), {"fields": list(data.keys())})
+    agent = await get_status(agent_id)
     return _agent_to_detail(agent)
 
 

@@ -80,13 +80,15 @@ async def handle_system_message(message: str) -> dict:
 
 
 def _create_agent(name: str) -> dict:
-    """Create a new agent."""
-    import secrets
-    agent_id = secrets.token_hex(16)
-    now = datetime.now(timezone.utc).isoformat()
+    """Create a new agent via the standard DB API (id is generated inside)."""
     try:
-        db.create_agent(agent_id, name, tools=["read", "bash", "web_search"])
-        return {"response": f"Created agent {name}. It's ready to use."}
+        # Sanitize to match PiAgentConfig name pattern
+        safe = "".join(c if c.isalnum() or c in "_-" else "-" for c in name.strip())[:64]
+        if not safe:
+            return {"response": "Agent name is invalid. Use letters, numbers, _ or -."}
+        agent = db.create_agent(name=safe, tools=["read", "bash", "web_search"])
+        db.update_agent_status(agent["id"], "idle")
+        return {"response": f"Created agent {safe}. It's ready to use."}
     except Exception as e:
         return {"response": f"Failed to create agent: {e}"}
 

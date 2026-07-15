@@ -83,6 +83,22 @@ class PiAgentDetail(PiAgentSummary):
     schedule: Optional[str] = None
 
 
+class PiAgentUpdate(BaseModel):
+    """Partial update for an existing agent (PATCH)."""
+    model: Optional[str] = None
+    persona: Optional[str] = None
+    tools: Optional[list[str]] = None
+    skills: Optional[list[str]] = None
+    extensions: Optional[list[str]] = None
+    system_prompt: Optional[str] = None
+    git_repo: Optional[str] = None
+    schedule: Optional[str] = None
+    tags: Optional[list[str]] = None
+    # Accepted from UI; not persisted in core agents columns (T1 local operator)
+    auto_compact: Optional[bool] = None
+    context_window: Optional[int] = None
+
+
 # ═══════════════════════════════════════════════════════════════════
 # Session Models
 # ═══════════════════════════════════════════════════════════════════

@@ -198,9 +198,9 @@ async function exportCsv() {
 
       <!-- Event type breakdown -->
       <div v-if="stats.event_types && Object.keys(stats.event_types).length > 0" class="stats-detail fade-up fade-up-d3">
-        <span v-for="(count, type) in stats.event_types" :key="type" class="stat-chip">
-          <span class="stat-chip-dot" :class="eventBadgeClass(type)"></span>
-          <span class="stat-chip-name">{{ type.replace(/_/g, ' ') }}</span>
+        <span v-for="(count, type) in stats.event_types" :key="String(type)" class="stat-chip">
+          <span class="stat-chip-dot" :class="eventBadgeClass(String(type))"></span>
+          <span class="stat-chip-name">{{ String(type).replace(/_/g, ' ') }}</span>
           <span class="stat-chip-count">{{ count }}</span>
         </span>
       </div>

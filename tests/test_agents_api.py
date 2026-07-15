@@ -201,3 +201,30 @@ class TestDeleteAgent:
         await async_client.delete(f"/api/agents/{agent_id}")
         activities = db.list_activities()
         assert any(a["event_type"] == "agent_deleted" for a in activities)
+
+
+class TestPatchAgent:
+    """PATCH /api/agents/{id} — update agent config."""
+
+    async def test_patch_tools_and_model(self, async_client, mock_pi_binary):
+        create_resp = await async_client.post("/api/agents", json={
+            "name": "patch-me",
+            "model": "sonnet",
+            "tools": ["read"],
+        })
+        agent_id = create_resp.json()["id"]
+
+        resp = await async_client.patch(f"/api/agents/{agent_id}", json={
+            "model": "opus",
+            "tools": ["read", "bash", "web_search"],
+            "system_prompt": "Be concise.",
+        })
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["model"] == "opus"
+        assert data["tools"] == ["read", "bash", "web_search"]
+        assert data["system_prompt"] == "Be concise."
+
+    async def test_patch_not_found(self, async_client):
+        resp = await async_client.patch("/api/agents/nonexistent", json={"model": "x"})
+        assert resp.status_code == 404

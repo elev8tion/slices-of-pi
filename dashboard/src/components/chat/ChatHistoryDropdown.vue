@@ -109,7 +109,7 @@ function startEditName() {
   editingName.value = true
   nameInput.value = props.sessionName || ''
   setTimeout(() => {
-    const el = document.getElementById('session-name-input')
+    const el = document.getElementById('session-name-input') as HTMLInputElement | null
     el?.focus()
     el?.select()
   }, 50)

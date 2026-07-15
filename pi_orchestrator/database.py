@@ -349,7 +349,17 @@ def init_db() -> None:
     # ── Migrations: mcp_keys table ─────────────────────────────
     _safe_add_column(conn, "mcp_keys", "value", "TEXT")
 
-    conn.commit()\
+    conn.commit()
+
+
+def _safe_execute(conn: sqlite3.Connection, sql: str, params: tuple | list = ()) -> sqlite3.Cursor:
+    """Execute SQL on a connection (shared helper for routers)."""
+    return conn.execute(sql, params)
+
+
+def _safe_commit(conn: sqlite3.Connection) -> None:
+    """Commit a connection (shared helper for routers)."""
+    conn.commit()
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -414,23 +424,73 @@ def update_agent_status(agent_id: str, status: str) -> None:
     conn.commit()
 
 
-def update_agent(agent_id: str, tags: Optional[list[str]] = None) -> None:
-    """Update agent fields. Currently supports updating tags.
+def update_agent(
+    agent_id: str,
+    *,
+    tags: Optional[list[str]] = None,
+    model: Optional[str] = None,
+    persona: Optional[str] = None,
+    tools: Optional[list[str]] = None,
+    skills: Optional[list[str]] = None,
+    extensions: Optional[list[str]] = None,
+    system_prompt: Optional[str] = None,
+    git_repo: Optional[str] = None,
+    schedule_cron: Optional[str] = None,
+) -> Optional[dict]:
+    """Update agent fields. Returns updated agent dict, or None if missing.
 
     When tags is provided, syncs to BOTH the agents.tags JSON column
     AND the normalized tags + agent_tags tables for queryability.
     """
     conn = _get_conn()
+    if not get_agent(agent_id):
+        return None
+
+    sets: list[str] = []
+    params: list = []
+
+    if model is not None:
+        sets.append("model = ?")
+        params.append(model)
+    if persona is not None:
+        sets.append("persona = ?")
+        params.append(persona)
+    if tools is not None:
+        sets.append("tools = ?")
+        params.append(json.dumps(tools))
+    if skills is not None:
+        sets.append("skills = ?")
+        params.append(json.dumps(skills))
+    if extensions is not None:
+        sets.append("extensions = ?")
+        params.append(json.dumps(extensions))
+    if system_prompt is not None:
+        sets.append("system_prompt = ?")
+        params.append(system_prompt)
+    if git_repo is not None:
+        sets.append("git_repo = ?")
+        params.append(git_repo)
+    if schedule_cron is not None:
+        sets.append("schedule_cron = ?")
+        params.append(schedule_cron)
+
     if tags is not None:
-        # Update JSON column (fast path for pi_session_service)
+        sets.append("tags = ?")
+        params.append(json.dumps(tags))
+
+    if sets:
+        sets.append("updated_at = ?")
+        params.append(_now_iso())
+        params.append(agent_id)
         conn.execute(
-            "UPDATE agents SET tags = ?, updated_at = ? WHERE id = ?",
-            (json.dumps(tags), _now_iso(), agent_id)
+            f"UPDATE agents SET {', '.join(sets)} WHERE id = ?",
+            params,
         )
+
+    if tags is not None:
         # Sync to normalized tables (queryable path)
         conn.execute("DELETE FROM agent_tags WHERE agent_id = ?", (agent_id,))
         for tag_name in tags:
-            # Upsert tag
             existing = conn.execute(
                 "SELECT id FROM tags WHERE name = ?", (tag_name,)
             ).fetchone()
@@ -442,12 +502,13 @@ def update_agent(agent_id: str, tags: Optional[list[str]] = None) -> None:
                     "INSERT INTO tags (id, name) VALUES (?, ?)",
                     (tag_id, tag_name)
                 )
-            # Link agent to tag
             conn.execute(
                 "INSERT OR IGNORE INTO agent_tags (agent_id, tag_id) VALUES (?, ?)",
                 (agent_id, tag_id)
             )
+
     conn.commit()
+    return get_agent(agent_id)
 
 
 def update_session_file(session_id: str, session_file: str) -> None:
