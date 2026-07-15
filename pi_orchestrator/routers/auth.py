@@ -1,8 +1,11 @@
 """
-Authentication router — user registration, login, JWT tokens.
+Authentication router — optional local user registration, login, JWT tokens.
 
-In single-user mode (PI_NO_AUTH=1), all endpoints automatically
+Intended daily path is single-operator mode (PI_NO_AUTH=1): endpoints
 authenticate as the default admin user and no login is required.
+
+This is local convenience auth — not multi-tenant SaaS identity
+(see docs/PRODUCT_INTENT.md).
 """
 
 from __future__ import annotations

@@ -1,8 +1,9 @@
 """
-Pi Orchestrator — manage multiple pi coding agents.
+Pi Orchestrator — manage multiple pi coding agents on one machine.
 
-FastAPI application with lifespan management. No Docker, no Redis,
-no multi-tenant auth. Single-user, bound to localhost.
+FastAPI application with lifespan management.
+Product intent: local single-operator console (see docs/PRODUCT_INTENT.md).
+No Docker, no Redis, no multi-tenant SaaS. Single-operator, bound to localhost.
 """
 
 from __future__ import annotations

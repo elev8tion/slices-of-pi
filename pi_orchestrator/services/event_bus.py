@@ -1,7 +1,8 @@
 """
 In-process event bus for Pi Orchestrator.
 
-Single-user, no Redis needed. Publishers call `publish(event)`.
+Local single-operator design — no Redis, no multi-tenant fan-out fabric.
+Publishers call `publish(event)`.
 Subscribers register callbacks with `subscribe(callback)`.
 The WebSocket router fans events out to connected dashboard clients.
 

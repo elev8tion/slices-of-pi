@@ -1,6 +1,7 @@
 """
-Pi Orchestrator configuration — single-user, no Docker, no Redis.
+Pi Orchestrator configuration — local single-operator, no Docker, no Redis.
 
+Not a multi-tenant or SaaS configuration surface (see docs/PRODUCT_INTENT.md).
 All paths resolve relative to ~/.pi/agent/.
 All settings are environment-variable overridable.
 """

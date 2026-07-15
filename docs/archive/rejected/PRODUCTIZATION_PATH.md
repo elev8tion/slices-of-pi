@@ -1,3 +1,15 @@
+# ⛔ REJECTED — NOT A PRODUCT ROADMAP
+
+> **Binding intent:** This document is **historical only** and describes a direction the project **explicitly does not pursue**.
+>
+> Slice of Pi remains a **local, single-operator** tool. Do **not** implement SaaS, multi-tenant cloud, Tier-4 enterprise fleet, billing, or commercial multi-tenant self-host from this file.
+>
+> Authoritative intent: [`docs/PRODUCT_INTENT.md`](../../PRODUCT_INTENT.md) and [`AGENTS.md`](../../../AGENTS.md).
+>
+> Agents: ignore the body below for planning. Do not revive these phases.
+
+---
+
 # Productizing Slice of Pi
 
 **Current state**: Single-user mode (`PI_NO_AUTH=1`). No login required.

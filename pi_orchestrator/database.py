@@ -1,7 +1,8 @@
 """
 SQLite persistence layer for Pi Orchestrator.
 
-Single-user, no connection pooling needed. All writes are synchronous
+Local single-operator store — not a multi-tenant database design.
+No connection pooling needed. All writes are synchronous
 (FastAPI runs async handlers that call sync DB methods — SQLite is
 single-writer anyway, so async wouldn't help).
 """

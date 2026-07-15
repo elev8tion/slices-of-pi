@@ -1,6 +1,11 @@
 # Slice of Pi
 
-A web dashboard and API server for managing multiple **pi** coding agents on a single machine.
+A **local, single-operator** web dashboard and API for managing multiple **pi** coding agents on **one machine**.
+
+> **Product intent:** One operator. One machine. Many pi agents. **No SaaS.**  
+> Binding statement: [`docs/PRODUCT_INTENT.md`](./docs/PRODUCT_INTENT.md) · Agent rules: [`AGENTS.md`](./AGENTS.md)
+
+This project is **not** a multi-tenant cloud product, not a Tier-4 enterprise fleet platform, and not a commercial SaaS roadmap. Optional local login/sharing features are convenience only.
 
 Run `./slices` to start everything — a FastAPI backend serves the Vue 3 dashboard on `localhost:8420`, where you can create agents, chat with them, view session history, and control the system.
 
@@ -75,18 +80,20 @@ FastAPI (port 8420)
 - **Backend**: FastAPI, SQLite, in-process event bus, APScheduler for cron
 - **Frontend**: Vue 3 + TypeScript + Pinia + Tailwind CSS
 - **Design**: Dark theme with lime accent (`#9DD522`)
-- **Auth**: JWT-based; `PI_NO_AUTH=1` for single-user mode (default via `./slices`)
-- **Scope**: Single-user localhost — no Docker, no Redis in the running design
+- **Auth**: `PI_NO_AUTH=1` for daily single-operator use (default via `./slices`); optional local JWT login exists but is not a multi-tenant product
+- **Scope**: Localhost single-operator — no Docker/Redis as core deps; **no SaaS / multi-tenant destination**
 
 **Living docs**
 
 | Doc | Purpose |
 |-----|---------|
-| [PROJECT_STATE.md](./PROJECT_STATE.md) | Codebase truth — packages, routes, services, doc disposition |
+| [docs/PRODUCT_INTENT.md](./docs/PRODUCT_INTENT.md) | **Binding** product direction (read first) |
+| [AGENTS.md](./AGENTS.md) | Rules for coding agents |
+| [PROJECT_STATE.md](./PROJECT_STATE.md) | Codebase truth — packages, routes, services |
 | [docs/architecture.md](./docs/architecture.md) | System architecture |
 | [docs/design.md](./docs/design.md) | Design system tokens |
 | [docs/ops/CLAUDE_OAUTH_SETUP.md](./docs/ops/CLAUDE_OAUTH_SETUP.md) | Pi / Claude OAuth ops notes |
-| [docs/archive/](./docs/archive/) | Superseded plans, reports, future roadmaps |
+| [docs/archive/](./docs/archive/) | Historical only; `archive/rejected/` = nullified SaaS/Tier-4 sketches |
 
 ---
 
@@ -111,7 +118,8 @@ FastAPI (port 8420)
 ├── slice_of_pi/                # Abstract contract package (ABCs) — not wired to orchestrator
 ├── pi-mcp-server/              # Optional MCP STDIO bridge to the HTTP API
 ├── pi-coding-agent/            # Extracted Pi agent reference docs (not runtime)
-├── docs/                       # Architecture, design, ops, archive
+├── docs/                       # PRODUCT_INTENT, architecture, design, ops, archive
+├── AGENTS.md                   # Rules for coding agents (no SaaS)
 ├── PROJECT_STATE.md            # Authoritative project state from the tree
 └── README.md
 ```

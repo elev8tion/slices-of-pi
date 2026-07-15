@@ -3,6 +3,8 @@
 **Authority:** This document is derived only from files and folders present in the working tree.  
 **Date of inspection:** 2026-07-15  
 **Last documentation cleanup:** 2026-07-15 (root `.md` files archived, updated, or deleted per §9)  
+**Product intent (binding):** [docs/PRODUCT_INTENT.md](./docs/PRODUCT_INTENT.md) — local single-operator; **not** SaaS / multi-tenant / Tier-4.  
+**Agent rules:** [AGENTS.md](./AGENTS.md)  
 **Method:** Directory inventory, package manifests, entry points, router/service/module reads, import graph checks, test layout. No external product claims.
 
 ---
@@ -259,7 +261,7 @@ Tests target **`pi_orchestrator`**, not `slice_of_pi` ABCs.
 - Pi agent documentation extraction tree (`pi-coding-agent/`)
 - Historical plans/reports under `docs/archive/` (see §9)
 
-**What is explicitly not in the running design:** Docker orchestration, Redis, multi-tenant SaaS, billing, Slack/Telegram fleet features (those appear only in `docs/archive/` roadmaps, not as implemented routers).
+**What is explicitly not in the running design — and not a product goal:** Docker/K8s as core agent runtime, Redis as requirement, multi-tenant SaaS, billing, Slack/Telegram/WhatsApp **product** channels, Tier-4 enterprise fleet. Rejected sketches live in `docs/archive/rejected/` (do not implement). Optional local auth/sharing in the tree is convenience, not a multi-tenant foundation.
 
 ---
 
@@ -284,8 +286,8 @@ Tests target **`pi_orchestrator`**, not `slice_of_pi` ABCs.
 | `VOICE_FLIXZ_PLAN.md` | Plan superseded by code |
 | `PLAN-maestro-execution.md` | Build plan; substantial code shipped |
 | `NEXT_PHASES_PLAN.md` | Phase plan; many UI targets shipped |
-| `PRODUCTIZATION_PATH.md` | Future multi-user/SaaS only |
-| `FUTURE_TIER4.md` | Enterprise wishlist only |
+| `rejected/PRODUCTIZATION_PATH.md` | **REJECTED** SaaS/commercial path — do not implement |
+| `rejected/FUTURE_TIER4.md` | **REJECTED** enterprise/Tier-4 wishlist — do not implement |
 | `FRAME_VIZ_REPORT.md` | Historical implementation report |
 | `CAPABILITY_AUDIT.md` | Dated matrix; not re-verified as living truth |
 | `memory-handoff-map.md` | Residual planning map |
@@ -328,16 +330,17 @@ Any documentation that treats them as one fully integrated framework **overstate
 ## 11. Documentation end-state (current)
 
 ```
+AGENTS.md                  # mandatory agent rules (no SaaS)
 README.md
 PROJECT_STATE.md
 docs/
+  PRODUCT_INTENT.md        # binding product direction
   README.md
   architecture.md
   design.md
   ops/CLAUDE_OAUTH_SETUP.md
-  archive/                 # superseded plans & reports
-    README.md
-    …
+  archive/                 # historical only
+    rejected/              # SaaS/Tier-4 nullified (do not implement)
 ```
 
 ---

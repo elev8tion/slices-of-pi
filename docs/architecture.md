@@ -1,11 +1,13 @@
 # Slice of Pi — Architecture
 
-Living architecture doc. For package inventory and doc disposition, see [PROJECT_STATE.md](../PROJECT_STATE.md).
+Living architecture doc.  
+**Product direction (binding):** [PRODUCT_INTENT.md](./PRODUCT_INTENT.md) — local single-operator; **not** SaaS/multi-tenant.  
+**Codebase inventory:** [PROJECT_STATE.md](../PROJECT_STATE.md).
 
 ## System Overview
 
-Slice of Pi is a **single-user** web dashboard for managing multiple **pi** coding agents.
-Services bind to localhost (default port **8420**). No Docker, no Redis.
+Slice of Pi is a **local, single-operator** web dashboard for managing multiple **pi** coding agents on one machine.
+Services bind to localhost (default port **8420**). No Docker, no Redis as core infrastructure.
 
 ```
 ┌──────────────┐     WebSocket / HTTP      ┌──────────────────┐
@@ -141,6 +143,14 @@ Alternate: `install.sh` runs API without forcing static dashboard and starts Vit
 
 See [design.md](./design.md) for brand colors, typography, and UI tokens.
 
-## Future / productization notes
+## Product boundaries
 
-Multi-user SaaS, enterprise channels, and similar ideas are **not** part of the running architecture. Historical roadmaps live under [archive/](./archive/).
+| This architecture | Not this architecture |
+|-------------------|------------------------|
+| One host, one operator (default) | Multi-tenant SaaS cloud |
+| SQLite + in-process bus | Redis/cluster control plane as requirement |
+| `pi` subprocesses | Docker/K8s agent fleet as the core model |
+| Optional local auth/sharing | Commercial multi-tenant / billing product |
+
+Rejected historical sketches (SaaS, Tier-4 enterprise): [archive/rejected/](./archive/rejected/).  
+Do not treat them as roadmap.

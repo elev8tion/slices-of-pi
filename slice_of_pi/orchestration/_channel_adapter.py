@@ -1,21 +1,16 @@
 """
 Channel Adapter Interface
 
-Abstract adapter for external message channels.
+Abstract adapter for external message channels (contract package only).
 
-Agents can communicate through many channels: Slack, Discord,
-Telegram, WhatsApp, Microsoft Teams, webhooks, email, SMS.
+This is an ABC for hypothetical adapters — not a Slice of Pi product
+roadmap. The runnable product is a local single-operator console
+(see docs/PRODUCT_INTENT.md); it does not ship Slack/Telegram/etc.
+as enterprise product channels.
 
-Each channel has its own protocol, authentication, and message
-format. This interface abstracts those differences so the
-orchestrator can route messages uniformly.
-
-Architecture:
-  Orchestrator → MessageRouter → [ChannelAdapter for each channel]
-                                   ↓
-                              External platform
-                                   ↓
-                              [Incoming webhook] → ChannelAdapter → MessageRouter → Agent
+Example channel types an *implementor* might build elsewhere:
+webhooks, email, chat platforms. Naming them here does not commit
+this repository to SaaS or multi-tenant messaging products.
 """
 
 from __future__ import annotations
@@ -34,12 +29,9 @@ class ChannelAdapter(ABC):
     need to connect to. The adapter handles platform-specific auth,
     message formatting, attachment handling, and event streaming.
 
-    Implementations:
-      - SlackAdapter     — Slack Events API + Socket Mode
-      - TelegramAdapter  — Telegram Bot API
-      - DiscordAdapter   — Discord Gateway
-      - WhatsAppAdapter  — Twilio/WhatsApp Business API
-      - WebhookAdapter   — Generic incoming webhook
+    Example implementor names (illustrative only, not shipped here):
+      - WebhookAdapter — generic incoming webhook
+      - Other platform-specific adapters as needed by a local setup
     """
 
     @property
