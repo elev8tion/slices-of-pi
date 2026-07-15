@@ -3,7 +3,8 @@
 A **local, single-operator** web dashboard and API for managing multiple **pi** coding agents on **one machine**.
 
 > **Product intent:** One operator. One machine. Many pi agents. **No SaaS.**  
-> Binding statement: [`docs/PRODUCT_INTENT.md`](./docs/PRODUCT_INTENT.md) · Agent rules: [`AGENTS.md`](./AGENTS.md)
+> Binding statement: [`docs/PRODUCT_INTENT.md`](./docs/PRODUCT_INTENT.md) · Agent rules: [`AGENTS.md`](./AGENTS.md)  
+> **T1 delivery:** Tracks A–C complete (stabilize → harden → polish). See [`docs/health/HEALTH_BRIEF.md`](./docs/health/HEALTH_BRIEF.md).
 
 This project is **not** a multi-tenant cloud product, not a Tier-4 enterprise fleet platform, and not a commercial SaaS roadmap. Optional local login/sharing features are convenience only.
 
@@ -90,6 +91,9 @@ FastAPI (port 8420)
 | [docs/PRODUCT_INTENT.md](./docs/PRODUCT_INTENT.md) | **Binding** product direction (read first) |
 | [AGENTS.md](./AGENTS.md) | Rules for coding agents |
 | [PROJECT_STATE.md](./PROJECT_STATE.md) | Codebase truth — packages, routes, services |
+| [docs/health/HEALTH_BRIEF.md](./docs/health/HEALTH_BRIEF.md) | Post A–C health snapshot |
+| [docs/health/ROADMAP.md](./docs/health/ROADMAP.md) | Tracks A–C done; optional Track D UX |
+| [docs/health/OPERATOR_UX_PLAN.md](./docs/health/OPERATOR_UX_PLAN.md) | CapacityMeter / ResourceModal / YamlEditor plan |
 | [docs/architecture.md](./docs/architecture.md) | System architecture |
 | [docs/design.md](./docs/design.md) | Design system tokens |
 | [docs/ops/CLAUDE_OAUTH_SETUP.md](./docs/ops/CLAUDE_OAUTH_SETUP.md) | Pi / Claude OAuth ops notes |

@@ -1,79 +1,68 @@
-# Health Brief
+# Health Brief (post Tracks A–C)
 
-**SHA:** `9249dfa`  
+**Audit baseline SHA:** `9249dfa`  
+**Tracks complete through:** `6a7d777` (C) + Flixz general `d5ab850`  
 **Date:** 2026-07-15  
 **Product:** Local single-operator pi fleet manager ([PRODUCT_INTENT.md](../PRODUCT_INTENT.md))  
 **Not:** SaaS / multi-tenant / Tier-4  
 
-## Where we are (facts)
+## Tracks status
+
+| Track | Theme | Status | Notes |
+|-------|--------|--------|--------|
+| **A** | Stabilize | **Done** | [TRACK_A_STATUS.md](./TRACK_A_STATUS.md) |
+| **B** | Harden (localhost) | **Done** | [TRACK_B_STATUS.md](./TRACK_B_STATUS.md) |
+| **C** | Local polish | **Done** | [TRACK_C_STATUS.md](./TRACK_C_STATUS.md) |
+| Flixz general | Operator tool on dashboard | **Done** | `/flixz` + nav + dashboard card |
+
+## Where we are (post A–C)
 
 | Dimension | Score (1–5) | Evidence |
 |-----------|-------------|----------|
-| Starts & health | **5** | E2E_PROBE: `/health` ok; SPA 200; docs 200 |
-| Core agent lifecycle | **5** | Probe create/get/delete; unit agents tests |
-| Chat path (real pi) | **5** | Probe SSE `text_delta` → `pong` with pi 0.80.7 |
-| UI production build | **4** | vite PASS; vue-tsc FAIL (9 errors) |
-| Automated tests | **4** | 297/297 unit; live e2e suite broken without server |
-| Localhost security model | **3** | Intentional open plane under PI_NO_AUTH; dangerous if non-loopback |
-| Docs / intent clarity | **5** | PRODUCT_INTENT + AGENTS + rejected archives |
-| Packaging clarity | **3** | Dual package still confuses; contracts unwired by design |
-| CI | **1** | No `.github` workflows |
-| **Overall (T1)** | **~4** | **Runnable and useful locally; stabilize gaps next** |
+| Starts & health | **5** | E2E probe; Settings uses `/health` |
+| Core agent lifecycle | **5** | CRUD + PATCH; unit tests |
+| Chat path (real pi) | **5** | Probe pong; history hydration (C2) |
+| UI production build | **5** | vite PASS; vue-tsc green (A4) |
+| Automated tests | **5** | 315+ unit pass; live e2e skips without server |
+| Localhost security model | **4** | Path harden, reveal gate, bind warn (B); still open under `PI_NO_AUTH` by design |
+| Docs / intent clarity | **5** | PRODUCT_INTENT + AGENTS + track statuses |
+| Packaging clarity | **4** | Dual package explained (C5) |
+| CI | **5** | `.github/workflows/ci.yml` (C4) |
+| **Overall (T1)** | **~5** | **Stabilize → harden → polish complete for T1 bar** |
 
-## What works end-to-end (probed)
+## Closed risks (were P0/P1 at audit)
 
-1. Orchestrator starts on `127.0.0.1:8420` with `PI_NO_AUTH=1`  
-2. Dashboard static serve returns 200  
-3. Agent create → chat with real **pi 0.80.7** → SSE text → delete  
-4. Skills discovery and host telemetry respond  
-5. Lifespan services start: event bus, sync engine, scheduler, cleanup  
+| Was | Resolution |
+|-----|------------|
+| Credentials write crash | A1 `_safe_execute` / `_safe_commit` |
+| Settings `/api/health` | A2 → `/health` |
+| vue-tsc failures | A4 fixed |
+| Agent PATCH missing | A3 implemented |
+| system_chat create_agent | A5 fixed |
+| Live e2e noise | A6 skip without server |
+| Files path traversal | B1 `relative_to` + lstrip fix |
+| Terminal vs chat session dirs | B2 agent **name** |
+| Flixz arbitrary paths | B3 allowlist |
+| Non-loopback silent bind | B4 warning |
+| Casual credential dump | B5 `?reveal=1` |
+| Dead McpKeys / Slice Ops | C1 on Settings |
+| Chat session empty on switch | C2 hydrate |
+| Scheduler ad-hoc pi | C3 via `stream_chat` |
+| No CI | C4 |
+| Package confusion | C5 |
 
-## Top risks (fixable product / operator)
+## Remaining residual (not blockers)
 
-| Sev | Issue | Source |
-|-----|--------|--------|
-| **P0** | Credentials write path crashes (`_safe_execute` missing) | BACKEND_REVIEW |
-| **P0** | Settings UI calls `/api/health` (does not exist; only `/health`) | FRONTEND_REVIEW / INVENTORY |
-| **P0** | vue-tsc fails (type errors block strict quality bar) | FRONTEND_REVIEW |
-| **P1** | Files path `startswith` traversal risk | BACKEND / SECURITY |
-| **P1** | Session dir name vs agent_id inconsistency (chat vs terminal) | BACKEND_REVIEW |
-| **P1** | System chat `create_agent` signature mismatch | BACKEND_REVIEW |
-| **P1** | Scheduler may bypass managed session path | BACKEND_REVIEW |
-| **P1** | UI expects agent PATCH; backend may not implement | INVENTORY |
-| **P1** | Dead UI: McpKeysPanel, YamlEditor, etc. unmounted | INVENTORY / FRONTEND |
-| **P2** | No CI; live e2e tests not wired to start server | TEST_REPORT |
-| **P2** | Auth-on mode is incomplete (false security if misused) | SECURITY_NOTES |
+- Auth-on mode incomplete if `PI_NO_AUTH` unset (by design for T1 daily path)  
+- Optional UI primitives still unmounted: `CapacityMeter`, `ResourceModal`, `YamlEditor` — see [OPERATOR_UX_PLAN.md](./OPERATOR_UX_PLAN.md)  
+- `stores/notifications.ts` available but not wired to global WS toasts  
 
-**Localhost single-op under `PI_NO_AUTH=1`:** open control plane is **by design**. Do **not** bind `0.0.0.0` or port-forward without understanding SECURITY_NOTES.
-
-## Where we need to be (fixed)
+## Product target (unchanged)
 
 > One operator. One machine. Many pi agents. No SaaS.
 
-Quality bar for T1:
+See [TARGET.md](./TARGET.md) and [PRODUCT_INTENT.md](../PRODUCT_INTENT.md).
 
-1. Critical operator paths never crash (credentials, agent edit, settings health)  
-2. Unit suite green + optional live e2e with harness  
-3. Typecheck green or intentionally relaxed  
-4. Path safety for files/flixz on a trusted local machine  
-5. Docs/UI match API  
+## Next (optional Track D — operator UX)
 
-## How to get there
-
-See [ROADMAP.md](./ROADMAP.md) — Stabilize → Harden (localhost) → Local polish.  
-**No** multi-tenant or Tier-4 work packages.
-
-## Artifact index
-
-| File | Role |
-|------|------|
-| [TARGET.md](./TARGET.md) | Fixed T1 target |
-| [INVENTORY.md](./INVENTORY.md) | Surface map |
-| [TEST_REPORT.md](./TEST_REPORT.md) | Pytest / build |
-| [E2E_PROBE.md](./E2E_PROBE.md) | Live probe |
-| [BACKEND_REVIEW.md](./BACKEND_REVIEW.md) | Backend findings |
-| [FRONTEND_REVIEW.md](./FRONTEND_REVIEW.md) | Frontend findings |
-| [SECURITY_NOTES.md](./SECURITY_NOTES.md) | Localhost threat model |
-| [CONTRACTS_VERDICT.md](./CONTRACTS_VERDICT.md) | slice_of_pi / MCP disposition |
-| [GAP_MATRIX.md](./GAP_MATRIX.md) | Feature matrix |
-| [ROADMAP.md](./ROADMAP.md) | Ordered next work |
+Plan only: [OPERATOR_UX_PLAN.md](./OPERATOR_UX_PLAN.md) — wire CapacityMeter / ResourceModal / YamlEditor under local operator UX. Not required for T1 health bar.

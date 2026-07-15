@@ -3,8 +3,10 @@
 **Authority:** This document is derived only from files and folders present in the working tree.  
 **Date of inspection:** 2026-07-15  
 **Last documentation cleanup:** 2026-07-15 (root `.md` files archived, updated, or deleted per §9)  
+**Last delivery update:** 2026-07-15 — Tracks **A + B + C complete** (T1 stabilize → harden → polish); general Flixz on dashboard.  
 **Product intent (binding):** [docs/PRODUCT_INTENT.md](./docs/PRODUCT_INTENT.md) — local single-operator; **not** SaaS / multi-tenant / Tier-4.  
 **Agent rules:** [AGENTS.md](./AGENTS.md)  
+**Health / tracks:** [docs/health/HEALTH_BRIEF.md](./docs/health/HEALTH_BRIEF.md) · [ROADMAP.md](./docs/health/ROADMAP.md) · TRACK_A/B/C_STATUS · optional [OPERATOR_UX_PLAN.md](./docs/health/OPERATOR_UX_PLAN.md)  
 **Method:** Directory inventory, package manifests, entry points, router/service/module reads, import graph checks, test layout. No external product claims.
 
 ---
@@ -15,9 +17,9 @@ There are **two named packages** and **one primary runnable product**:
 
 | Identity | Where declared | What it is in practice |
 |----------|----------------|------------------------|
-| **slice-of-pi** | Root `pyproject.toml` | Python package of **abstract contracts** (ABCs / Protocols). Version `0.1.0`. Classifiers: Pre-Alpha. Description: “Architectural contract layer… abstract interfaces, ABCs, and Protocols.” |
-| **pi-orchestrator** | `pi_orchestrator/pyproject.toml` | FastAPI app: “manage multiple pi coding agents with an API server and dashboard.” Version `0.1.0`. |
-| **Product (user-facing)** | `README.md`, `slices`, `start-orchestrator.py`, `dashboard/` | Local **web dashboard + API** that manages **pi coding agent** subprocesses on a single machine. |
+| **slice-of-pi** | Root `pyproject.toml` | Abstract **contracts** package only (not imported by product). Description clarifies it is not the runnable app. |
+| **pi-orchestrator** | `pi_orchestrator/pyproject.toml` | **Runnable** FastAPI local single-operator API. Version `0.1.0`. |
+| **Product (user-facing)** | `README.md`, `slices`, `start-orchestrator.py`, `dashboard/` | Local **web dashboard + API** for **pi** subprocesses; includes general `/flixz`, Settings ops/MCP keys. |
 
 **Important structural finding:** `pi_orchestrator` does **not** import `slice_of_pi` anywhere in Python or TypeScript sources. The only non-doc reference to the package name is packaging (`pyproject.toml` `include = ["slice_of_pi*"]`). The contracts package and the orchestrator are **side-by-side**, not wired together.
 
@@ -62,8 +64,9 @@ slice-of-pi/                          # git root
 ├── slice_of_pi/                      # abstract contract package (~2.7k LOC) — not wired to orchestrator
 ├── pi-mcp-server/                    # optional MCP STDIO bridge (~219 LOC TS) to orchestrator HTTP API
 ├── pi-coding-agent/                  # extracted Pi agent docs + graph artifacts (not runtime code)
-├── docs/                             # living architecture/design/ops + archive/
-├── .pi/                              # local runtime scaffold (gitignored pattern exists; present on disk)
+├── docs/                             # PRODUCT_INTENT, architecture, design, ops, health/, archive/
+├── .github/workflows/ci.yml          # pytest + vue-tsc + vite (Track C)
+├── AGENTS.md                         # agent rules (no SaaS)
 ├── README.md                         # user entry / quick start
 └── PROJECT_STATE.md                  # this file — codebase truth
 ```
@@ -339,8 +342,10 @@ docs/
   architecture.md
   design.md
   ops/CLAUDE_OAUTH_SETUP.md
+  health/                  # A–C done; HEALTH_BRIEF, ROADMAP, TRACK_*, OPERATOR_UX_PLAN
   archive/                 # historical only
     rejected/              # SaaS/Tier-4 nullified (do not implement)
+.github/workflows/ci.yml
 ```
 
 ---

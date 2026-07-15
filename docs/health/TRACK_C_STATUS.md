@@ -2,6 +2,7 @@
 
 **Date:** 2026-07-15  
 **Product:** T1 local single-operator only  
+**Overall program:** Tracks **A + B + C complete** (see [HEALTH_BRIEF.md](./HEALTH_BRIEF.md), [ROADMAP.md](./ROADMAP.md))  
 
 ## Completed
 
@@ -20,4 +21,5 @@
 
 ## Next
 
-Roadmap Tracks A–C complete for T1 stabilize/harden/polish. Further work is product UX by choice only (PRODUCT_INTENT remains binding).
+Roadmap Tracks A–C complete for T1 stabilize/harden/polish.  
+Optional **Track D** (operator UX primitives): [OPERATOR_UX_PLAN.md](./OPERATOR_UX_PLAN.md) — CapacityMeter, ResourceModal, YamlEditor under PRODUCT_INTENT only.

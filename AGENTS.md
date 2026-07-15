@@ -44,3 +44,5 @@ Do not assume wiring contracts into a cloud framework is required.
 ## Preferred work
 
 Stabilize and improve the **local operator experience**: correctness, tests, security for localhost, UI, docs accuracy, launch scripts. Prefer small, verifiable changes.
+
+**Delivery status (2026-07-15):** Tracks **A (stabilize) → B (harden) → C (polish)** are complete for T1. See `docs/health/TRACK_*_STATUS.md` and `docs/health/HEALTH_BRIEF.md`. Optional next: operator UX plan `docs/health/OPERATOR_UX_PLAN.md` (CapacityMeter, ResourceModal, YamlEditor) — still under PRODUCT_INTENT only.

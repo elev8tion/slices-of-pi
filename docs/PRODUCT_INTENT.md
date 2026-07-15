@@ -1,7 +1,8 @@
 # Product Intent (binding)
 
 **Status:** Binding for all humans and agents working in this repository.  
-**Last confirmed:** 2026-07-15 by project owner.
+**Last confirmed:** 2026-07-15 by project owner.  
+**Delivery status:** T1 health tracks **A (stabilize) → B (harden) → C (polish)** are **complete**. Optional operator UX only: [health/OPERATOR_UX_PLAN.md](./health/OPERATOR_UX_PLAN.md).
 
 ## What this project is
 
@@ -11,6 +12,8 @@
 - Default auth mode for daily use: `PI_NO_AUTH=1` (single operator)
 - Runtime: FastAPI + SQLite + in-process event bus + `pi` subprocesses
 - UI: Vue dashboard served from the same process (or Vite in dev)
+- General **Flixz** at `/flixz` (system-level frame extraction; no agent required)
+- Settings: status, slice ops, MCP keys
 
 ## Explicit non-goals (do not build toward these)
 
@@ -30,11 +33,12 @@ Archived files under `docs/archive/` (especially anything labeled **REJECTED**) 
 | In scope | Notes |
 |----------|--------|
 | Local multi-agent management | Create, chat, terminal, sessions, schedules, skills |
-| Operator UX quality | Dashboard, voice, flixz, audit, ops, telemetry |
+| Operator UX quality | Dashboard, voice, general + per-agent flixz, audit, ops, telemetry |
 | Optional local login / sharing | Exists for convenience; **not** a multi-tenant SaaS foundation |
-| Stabilization | Tests, fixes, docs accuracy, packaging clarity |
-| Optional MCP bridge | Local STDIO tools against localhost API |
-| Abstract contracts in `slice_of_pi/` | May stay as interfaces; **not** a mandate to build a cloud framework |
+| Stabilization / harden / polish | Tracks A–C done; CI green; path/credential harden |
+| Optional MCP bridge | Local STDIO tools against localhost API; MCP keys UI in Settings |
+| Abstract contracts in `slice_of_pi/` | Stay dormant unless owner reopens; **not** a cloud framework mandate |
+| Optional UX primitives | CapacityMeter, ResourceModal, YamlEditor — plan only until Track D |
 
 ## How agents must behave
 

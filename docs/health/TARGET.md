@@ -1,7 +1,8 @@
 # Health audit — fixed product target
 
 **Confirmed:** 2026-07-15  
-**Authority:** [PRODUCT_INTENT.md](../PRODUCT_INTENT.md), [AGENTS.md](../../AGENTS.md)
+**Authority:** [PRODUCT_INTENT.md](../PRODUCT_INTENT.md), [AGENTS.md](../../AGENTS.md)  
+**Tracks A–C:** complete (T1 health bar met)
 
 ## Active target: T1 — Local single-operator
 
@@ -10,7 +11,8 @@ Best-in-class **local** pi agent fleet manager on **one machine**.
 - One operator (default `PI_NO_AUTH=1`)
 - Localhost FastAPI + Vue dashboard
 - SQLite + `pi` subprocesses
-- Improve reliability, tests, and operator UX
+- Stabilize / harden / polish: **done** (see ROADMAP + TRACK_*_STATUS)
+- Optional next: operator UX primitives ([OPERATOR_UX_PLAN.md](./OPERATOR_UX_PLAN.md))
 
 ## Explicitly rejected (do not roadmap)
 

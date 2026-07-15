@@ -36,10 +36,11 @@ Services bind to localhost (default port **8420**). No Docker, no Redis as core 
 
 ## Frontend (Vue 3 + TypeScript)
 
-- **Router**: 14 routes (`/`, `/agents`, `/sessions`, `/schedules`, `/skills`, `/extensions`, `/templates`, `/teams`, `/console`, `/ops`, `/replay`, `/audit`, `/settings`, `/login`)
-- **State**: Pinia stores (`app`, `auth`, `notifications`)
+- **Router**: 15 routes including **`/flixz`** (general frame extraction), plus `/`, `/agents`, `/sessions`, `/schedules`, `/skills`, `/extensions`, `/templates`, `/teams`, `/console`, `/ops`, `/replay`, `/audit`, `/settings`, `/login`
+- **State**: Pinia stores (`app`, `auth`, `notifications` — notifications optional/unwired)
 - **Styling**: Tailwind CSS — tokens in `dashboard/tailwind.config.js` and [design.md](./design.md)
 - **Auth guard**: Skips login when backend reports `PI_NO_AUTH` mode
+- **Delivery:** Tracks A–C complete; see [health/ROADMAP.md](./health/ROADMAP.md)
 
 ### Component Architecture
 
@@ -47,10 +48,12 @@ Services bind to localhost (default port **8420**). No Docker, no Redis as core 
 App.vue
 ├── ToastContainer, OnboardingChecklist, EditorHelpPanel
 └── Router views
-    ├── Dashboard.vue
-    ├── Agents.vue → AgentDetail (chat, terminal, files, git, voice, flixz, …)
+    ├── Dashboard.vue (+ Flixz entry card)
+    ├── Flixz.vue (system /api/flixz — no agent)
+    ├── Agents.vue → AgentDetail (chat, terminal, files, git, voice, per-agent flixz, …)
     ├── Sessions, Schedules, Skills, Extensions, Templates, Teams
-    ├── Console, OperatorRoom (/ops), Replay, AuditLog, Settings, Login
+    ├── Console (logs + Flixz tab), OperatorRoom (/ops), Replay, AuditLog
+    ├── Settings (Status · Slice Ops · MCP Keys), Login
 ```
 
 ## Backend (FastAPI + SQLite)

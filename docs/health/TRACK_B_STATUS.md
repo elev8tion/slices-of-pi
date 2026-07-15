@@ -2,6 +2,7 @@
 
 **Date:** 2026-07-15  
 **Product:** T1 local single-operator only  
+**Overall program:** Tracks **A + B + C complete** (see [HEALTH_BRIEF.md](./HEALTH_BRIEF.md), [ROADMAP.md](./ROADMAP.md))  
 
 ## Completed
 
