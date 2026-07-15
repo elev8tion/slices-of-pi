@@ -19,10 +19,12 @@ const configExpanded = ref(false)
 const config = ref({
   fps: 0,
   sceneDetect: true,
-  transcript: 'none' as 'none' | 'native',
-  describe: 'none' as 'none' | 'gemini' | 'claude',
+  transcript: 'auto' as 'none' | 'auto' | 'mlx' | 'parakeet' | 'compare' | 'captions' | 'native',
+  describe: 'none' as 'none' | 'claude' | 'openai' | 'grok',
   maxFrames: 60,
   sinks: [] as string[],
+  mode: 'full' as 'full' | 'transcript_only' | 'frames_only',
+  trashSourceVideo: true,
 })
 
 // ── Recent runs ───────────────────────────────────────────────
@@ -67,6 +69,8 @@ async function processVideo() {
         scene_detect: config.value.sceneDetect,
         transcript: config.value.transcript,
         describe: config.value.describe,
+        mode: config.value.mode,
+        trash_source_video: config.value.trashSourceVideo,
       }),
     })
 
@@ -168,7 +172,12 @@ function clearResult() {
             <label class="text-[10px] text-text-muted">Transcription</label>
             <select v-model="config.transcript" class="flixz-select">
               <option value="none">None</option>
-              <option value="native">Apple On-Device (Native)</option>
+              <option value="auto">Auto (captions → MLX → VoiceKit)</option>
+              <option value="mlx">MLX Whisper (primary)</option>
+              <option value="parakeet">Parakeet / Handy (secondary)</option>
+              <option value="compare">Compare MLX + Parakeet</option>
+              <option value="captions">YouTube captions only</option>
+              <option value="native">VoiceKit (short clips only)</option>
             </select>
           </div>
           <div class="flixz-config-field">

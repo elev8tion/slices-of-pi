@@ -3,10 +3,10 @@
 **Authority:** This document is derived only from files and folders present in the working tree.  
 **Date of inspection:** 2026-07-15  
 **Last documentation cleanup:** 2026-07-15 (root `.md` files archived, updated, or deleted per §9)  
-**Last delivery update:** 2026-07-15 — Tracks **A + B + C complete** (T1 stabilize → harden → polish); general Flixz on dashboard.  
+**Last delivery update:** 2026-07-15 — Tracks **A + B + C + D complete**; Operator UX 1–3 (workspace + live reactions + AppShell/⌘K) — see [OPERATOR_UX_1_3_PLAN.md](./docs/health/OPERATOR_UX_1_3_PLAN.md).  
 **Product intent (binding):** [docs/PRODUCT_INTENT.md](./docs/PRODUCT_INTENT.md) — local single-operator; **not** SaaS / multi-tenant / Tier-4.  
 **Agent rules:** [AGENTS.md](./AGENTS.md)  
-**Health / tracks:** [docs/health/HEALTH_BRIEF.md](./docs/health/HEALTH_BRIEF.md) · [ROADMAP.md](./docs/health/ROADMAP.md) · TRACK_A/B/C_STATUS · optional [OPERATOR_UX_PLAN.md](./docs/health/OPERATOR_UX_PLAN.md)  
+**Health / tracks:** [docs/health/HEALTH_BRIEF.md](./docs/health/HEALTH_BRIEF.md) · [ROADMAP.md](./docs/health/ROADMAP.md) · TRACK_A/B/C/D_STATUS · [OPERATOR_UX_1_3_PLAN.md](./docs/health/OPERATOR_UX_1_3_PLAN.md)  
 **Method:** Directory inventory, package manifests, entry points, router/service/module reads, import graph checks, test layout. No external product claims.
 
 ---

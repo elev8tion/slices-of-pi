@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useAppStore } from '@/stores/app'
 import type { Agent } from '@/stores/app'
-import NavIsland from '@/components/NavIsland.vue'
-import Sidebar from '@/components/Sidebar.vue'
+import AppShell from '@/components/AppShell.vue'
+import PageHeader from '@/components/PageHeader.vue'
 import StatCard from '@/components/StatCard.vue'
 import AgentCard from '@/components/AgentCard.vue'
 import AgentDetail from '@/components/AgentDetail.vue'
@@ -14,11 +14,11 @@ import TagCloud from '@/components/TagCloud.vue'
 import SectionBar from '@/components/SectionBar.vue'
 import CapacityMeter from '@/components/CapacityMeter.vue'
 import ResourceModal from '@/components/ResourceModal.vue'
-import { toastBus } from '@/main'
 
 const store = useAppStore()
 const showCreate = ref(false)
 const selectedAgent = ref<Agent | null>(null)
+const startTab = ref<string | undefined>(undefined)
 const host = ref<{
   cpu?: { percent: number }
   memory?: { used_gb: number; total_gb: number; percent: number }
@@ -30,6 +30,8 @@ onMounted(() => {
   store.fetchActivities()
   store.connectWebSocket()
   fetchHost()
+  // Poll host meters so capacity stays live (matches HostTelemetry cadence)
+  setInterval(fetchHost, 10000)
 })
 
 async function fetchHost() {
@@ -39,8 +41,14 @@ async function fetchHost() {
   } catch { /* optional */ }
 }
 
-function openDetail(agent: Agent) { selectedAgent.value = agent }
-function closeDetail() { selectedAgent.value = null }
+function openDetail(agent: Agent, tab?: string) {
+  selectedAgent.value = agent
+  startTab.value = tab
+}
+function closeDetail() {
+  selectedAgent.value = null
+  startTab.value = undefined
+}
 
 async function onCreateAgent(config: { name: string; model: string; tools: string[]; skills: string[] }) {
   const agent = await store.createAgent(config)
@@ -48,151 +56,138 @@ async function onCreateAgent(config: { name: string; model: string; tools: strin
     selectedAgent.value = agent
   }
 }
+
+// Command palette → open agent / create
+watch(() => store.commandOpenAgentId, (id) => {
+  if (!id) return
+  const agent = store.agents.find(a => a.id === id)
+  if (agent) {
+    openDetail(agent, store.commandOpenTab || 'chat')
+  }
+  store.clearCommandOpenAgent()
+})
+watch(() => store.requestCreateAgent, (v) => {
+  if (v) {
+    showCreate.value = true
+    store.clearRequestCreateAgent()
+  }
+})
+
+function hintCommandPalette() {
+  window.dispatchEvent(new CustomEvent('sop:open-command-palette'))
+}
 </script>
 
 <template>
-  <NavIsland />
-  <div class="dashboard">
-    <Sidebar />
-    <main class="main">
-      <!-- Header -->
-      <div class="dash-header fade-up fade-up-d2">
-        <div class="dash-title">
-          <h1>Local operator overview</h1>
-          <p>{{ store.agents.length }} agents · {{ store.onlineAgents }} online · {{ store.errorAgents }} alerts</p>
-        </div>
-        <div class="dash-actions gap-2">
-          <router-link to="/flixz" class="btn btn-secondary" title="General frame extraction — no agent required">
-            <span>🎞 Flixz</span>
-          </router-link>
-          <button type="button" class="btn btn-secondary" @click="showCreate = true">
-            + New agent
-          </button>
-        </div>
-      </div>
-
-      <!-- Capacity (D1) -->
-      <div class="capacity-row fade-up fade-up-d3">
-        <div class="capacity-card">
-          <div class="capacity-card-title">Agents online</div>
-          <CapacityMeter
-            :used="store.onlineAgents"
-            :total="Math.max(store.agents.length, 1)"
-            label="online"
-          />
-        </div>
-        <div v-if="host?.memory" class="capacity-card">
-          <div class="capacity-card-title">Host RAM</div>
-          <CapacityMeter
-            :used="Math.round(host.memory.used_gb * 10) / 10"
-            :total="Math.round(host.memory.total_gb * 10) / 10"
-            label="GB"
-          />
-        </div>
-        <div v-if="host?.disk" class="capacity-card">
-          <div class="capacity-card-title">Host disk</div>
-          <CapacityMeter
-            :used="Math.round(host.disk.used_gb)"
-            :total="Math.round(host.disk.total_gb)"
-            label="GB"
-          />
-        </div>
-        <div v-if="host?.cpu" class="capacity-card">
-          <div class="capacity-card-title">Host CPU</div>
-          <CapacityMeter
-            :used="Math.round(host.cpu.percent)"
-            :total="100"
-            label="%"
-          />
-        </div>
-      </div>
-
-      <!-- Stats Row -->
-      <div class="stats-row fade-up fade-up-d3">
-        <StatCard label="Agents Online" :value="store.onlineAgents" :sub="`of ${store.agents.length} registered`" />
-        <StatCard label="Busy now" :value="store.busyAgents" sub="concurrent sessions" />
-        <StatCard label="Total Tokens" :value="store.agents.reduce((s, a) => s + a.tokens_used, 0).toLocaleString()" sub="cumulative" />
-        <StatCard label="Connection" :value="store.connected ? 'Live' : '…'" sub="event bus" />
-      </div>
-
-      <!-- General Flixz entry -->
-      <router-link to="/flixz" class="flixz-dash-card fade-up fade-up-d4">
-        <div class="flixz-dash-icon">🎞</div>
-        <div class="flixz-dash-copy">
-          <div class="flixz-dash-title">Flixz — general frame extraction</div>
-          <div class="flixz-dash-sub">
-            Drop a path or URL, extract frames for analysis. Not tied to any agent.
-            Local files: place under ~/.pi/flixz/input or set PI_FLIXZ_ALLOW_ROOTS.
-          </div>
-        </div>
-        <span class="flixz-dash-cta">Open →</span>
-      </router-link>
-
-      <TagCloud class="fade-up fade-up-d5" />
-
-      <SectionBar title="Your agents" class="fade-up fade-up-d6" />
-      <div class="agent-grid fade-up fade-up-d7">
-        <AgentCard
-          v-for="agent in store.agents"
-          :key="agent.id"
-          :agent="agent"
-          @click="openDetail(agent)"
-        />
-        <button
-          v-if="store.agents.length === 0"
-          type="button"
-          class="agent-card header-card empty-cta"
-          style="grid-column: 1 / -1;"
-          @click="showCreate = true"
-        >
-          <div class="text-4xl mb-2 opacity-30">+</div>
-          <div class="text-sm font-semibold text-text-secondary">Create your first local agent</div>
-          <div class="text-xs text-text-tertiary mt-1">Opens create dialog — runs as a pi process on this machine</div>
+  <AppShell>
+    <PageHeader
+      title="Local operator overview"
+      :subtitle="`${store.agents.length} agents · ${store.onlineAgents} online · ${store.errorAgents} alerts`"
+    >
+      <template #actions>
+        <router-link to="/flixz" class="btn btn-secondary" title="General frame extraction — no agent required">
+          <span>🎞 Flixz</span>
+        </router-link>
+        <button type="button" class="btn btn-secondary" @click="showCreate = true">
+          + New agent
         </button>
-      </div>
+        <button type="button" class="btn btn-ghost-cmd" title="Command palette (⌘K)" @click="hintCommandPalette">
+          ⌘K
+        </button>
+      </template>
+    </PageHeader>
 
-      <div class="bottom-row fade-up fade-up-d8">
-        <ActivityFeed :activities="store.activities" />
-        <OpsQueue :agents="store.agents" />
-        <ComsPanel />
+    <!-- Capacity (D1) -->
+    <div class="capacity-row fade-up fade-up-d3">
+      <div class="capacity-card">
+        <div class="capacity-card-title">Agents online</div>
+        <CapacityMeter
+          :used="store.onlineAgents"
+          :total="Math.max(store.agents.length, 1)"
+          label="online"
+        />
       </div>
-    </main>
-  </div>
-  <AgentDetail :agent="selectedAgent" @close="closeDetail" />
+      <div v-if="host?.memory" class="capacity-card">
+        <div class="capacity-card-title">Host RAM</div>
+        <CapacityMeter
+          :used="Math.round(host.memory.used_gb * 10) / 10"
+          :total="Math.round(host.memory.total_gb * 10) / 10"
+          label="GB"
+        />
+      </div>
+      <div v-if="host?.disk" class="capacity-card">
+        <div class="capacity-card-title">Host disk</div>
+        <CapacityMeter
+          :used="Math.round(host.disk.used_gb)"
+          :total="Math.round(host.disk.total_gb)"
+          label="GB"
+        />
+      </div>
+      <div v-if="host?.cpu" class="capacity-card">
+        <div class="capacity-card-title">Host CPU</div>
+        <CapacityMeter
+          :used="Math.round(host.cpu.percent)"
+          :total="100"
+          label="%"
+        />
+      </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="stats-row fade-up fade-up-d3">
+      <StatCard label="Agents Online" :value="store.onlineAgents" :sub="`of ${store.agents.length} registered`" />
+      <StatCard label="Busy now" :value="store.busyAgents" sub="concurrent sessions" />
+      <StatCard label="Total Tokens" :value="store.agents.reduce((s, a) => s + a.tokens_used, 0).toLocaleString()" sub="cumulative" />
+      <StatCard label="Connection" :value="store.connected ? 'Live' : '…'" sub="event bus" />
+    </div>
+
+    <!-- General Flixz entry -->
+    <router-link to="/flixz" class="flixz-dash-card fade-up fade-up-d4">
+      <div class="flixz-dash-icon">🎞</div>
+      <div class="flixz-dash-copy">
+        <div class="flixz-dash-title">Flixz — general frame extraction</div>
+        <div class="flixz-dash-sub">
+          Drop a path or URL, extract frames for analysis. Not tied to any agent.
+          Local files: place under ~/.pi/flixz/input or set PI_FLIXZ_ALLOW_ROOTS.
+        </div>
+      </div>
+      <span class="flixz-dash-cta">Open →</span>
+    </router-link>
+
+    <TagCloud class="fade-up fade-up-d5" />
+
+    <SectionBar title="Your agents" class="fade-up fade-up-d6" />
+    <div class="agent-grid fade-up fade-up-d7">
+      <AgentCard
+        v-for="agent in store.agents"
+        :key="agent.id"
+        :agent="agent"
+        @click="openDetail(agent)"
+      />
+      <button
+        v-if="store.agents.length === 0"
+        type="button"
+        class="agent-card header-card empty-cta"
+        style="grid-column: 1 / -1;"
+        @click="showCreate = true"
+      >
+        <div class="text-4xl mb-2 opacity-30">+</div>
+        <div class="text-sm font-semibold text-text-secondary">Create your first local agent</div>
+        <div class="text-xs text-text-tertiary mt-1">Opens create dialog — runs as a pi process on this machine</div>
+      </button>
+    </div>
+
+    <div class="bottom-row fade-up fade-up-d8">
+      <ActivityFeed :activities="store.activities" />
+      <OpsQueue :agents="store.agents" />
+      <ComsPanel />
+    </div>
+  </AppShell>
+  <AgentDetail :agent="selectedAgent" :start-tab="startTab" @close="closeDetail" />
   <ResourceModal v-model:show="showCreate" @create="onCreateAgent" />
 </template>
 
 <style scoped>
-.dashboard {
-  display: flex;
-  gap: 0;
-  padding: 24px 32px 32px;
-  margin-top: 8px;
-  max-width: 1440px;
-  margin-left: auto;
-  margin-right: auto;
-}
-.main { flex: 1; min-width: 0; }
-.dash-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 24px;
-}
-.dash-title h1 {
-  font-family: 'Clash Display', sans-serif;
-  font-size: 26px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: #F0F0F2;
-}
-.dash-title p {
-  font-size: 13px;
-  color: rgba(255,255,255,0.3);
-  font-weight: 500;
-  margin-top: 2px;
-}
-.dash-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .capacity-row {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -267,6 +262,18 @@ async function onCreateAgent(config: { name: string; model: string; tools: strin
   border-color: rgba(157, 213, 34, 0.25);
   color: #D3ED2F;
 }
+.btn-ghost-cmd {
+  background: transparent;
+  color: rgba(233, 236, 224, 0.4);
+  border: 1px solid rgba(233, 236, 224, 0.1);
+  padding: 8px 12px;
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+}
+.btn-ghost-cmd:hover {
+  color: #9DD522;
+  border-color: rgba(157, 213, 34, 0.3);
+}
 .flixz-dash-card {
   display: flex;
   align-items: center;
@@ -301,23 +308,5 @@ async function onCreateAgent(config: { name: string; model: string; tools: strin
   font-weight: 600;
   color: #9DD522;
   flex-shrink: 0;
-}
-
-.fade-up { opacity: 0; transform: translateY(16px); animation: fadeUp 0.7s cubic-bezier(0.32,0.72,0,1) forwards; }
-.fade-up-d2 { animation-delay: 0.05s; }
-.fade-up-d3 { animation-delay: 0.1s; }
-.fade-up-d4 { animation-delay: 0.15s; }
-.fade-up-d5 { animation-delay: 0.2s; }
-.fade-up-d6 { animation-delay: 0.25s; }
-.fade-up-d7 { animation-delay: 0.3s; }
-.fade-up-d8 { animation-delay: 0.35s; }
-
-@keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
-
-@media (max-width: 968px) {
-  .dashboard { padding: 16px; }
-}
-@media (max-width: 768px) {
-  .dash-header { flex-direction: column; align-items: flex-start; gap: 12px; }
 }
 </style>

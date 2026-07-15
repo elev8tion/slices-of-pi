@@ -28,9 +28,10 @@ const emit = defineEmits<{ close: [] }>()
 
 const store = useAppStore()
 
-const activeTab = ref(props.startTab || 'chat')
+const activeTab = ref((props.startTab || 'chat').toLowerCase())
 const showVoice = ref(false)
 const isTerminalFullscreen = ref(false)
+const showMore = ref(false)
 const detail = ref<any>(null)
 const loading = ref(false)
 
@@ -54,9 +55,20 @@ const skillsLoading = ref(false)
 // Available tags from the API
 const availableTags = ref<{name:string,color:string,agent_count:number}[]>([])
 
-const tabs = ['Info', 'Chat', 'Slice Plays', 'Terminal', 'Files', 'Git', 'Credentials', 'Connectors', 'Flixz', 'Sharing', 'Activity', 'Edit', 'Settings']
+/** Primary workspace tabs — always visible */
+const primaryTabs = ['Chat', 'Terminal', 'Files', 'Info']
+/** Secondary — under More */
+const moreTabs = ['Slice Plays', 'Git', 'Credentials', 'Connectors', 'Flixz', 'Sharing', 'Activity', 'Edit', 'Settings']
 
 const initials = computed(() => props.agent?.name.slice(0, 1).toUpperCase() || '?')
+const moreActive = computed(() => moreTabs.some(t => activeTab.value === t.toLowerCase()))
+const moreLabel = computed(() => {
+  const hit = moreTabs.find(t => t.toLowerCase() === activeTab.value)
+  return hit || 'More'
+})
+const isTallTab = computed(() =>
+  ['chat', 'terminal', 'files', 'git', 'flixz'].includes(activeTab.value)
+)
 
 function onOverlayClick(e: MouseEvent) {
   if ((e.target as HTMLElement).classList.contains('overlay')) {
@@ -72,8 +84,20 @@ function onKeydown(e: KeyboardEvent) {
   if (e.key === 'Escape') emit('close')
 }
 
+watch(() => props.startTab, (t) => {
+  if (t) activeTab.value = t.toLowerCase()
+})
+
+watch(() => props.agent?.id, () => {
+  detail.value = null
+  if (props.startTab) activeTab.value = props.startTab.toLowerCase()
+  else activeTab.value = 'chat'
+  showMore.value = false
+})
+
 // Fetch full detail for the edit tab
 watch(activeTab, async (tab) => {
+  showMore.value = false
   if (tab === 'edit' && props.agent && !detail.value) {
     await loadDetail()
   }
@@ -199,6 +223,7 @@ function resetForm() {
 
 function onTabClick(tab: string) {
   activeTab.value = tab.toLowerCase()
+  showMore.value = false
 }
 </script>
 
@@ -218,26 +243,26 @@ function onTabClick(tab: string) {
           <div class="w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold bg-accent/15 text-[#9DD522]">
             {{ initials }}
           </div>
-          <div class="flex-1">
+          <div class="flex-1 min-w-0">
             <div class="font-display text-[17px] font-semibold tracking-[-0.02em] flex items-center gap-2">
               {{ agent.name }}
               <StatusIndicator :status="agent.status" size="sm" show-label />
             </div>
-            <div class="text-xs text-text-tertiary mt-0.5 flex gap-4 items-center">
+            <div class="text-xs text-text-tertiary mt-0.5 flex gap-4 items-center flex-wrap">
               <span class="flex items-center gap-1.5">Model: {{ agent.model }} <RuntimeBadge runtime="pi-code" size="sm" /></span>
               <span>Sessions: {{ agent.session_count }}</span>
               <span>Tokens: {{ agent.tokens_used.toLocaleString() }}</span>
             </div>
           </div>
-          <div class="flex gap-1.5">
+          <div class="flex gap-1.5 shrink-0">
             <button class="action-btn" title="Voice mode" @click="showVoice = true">🎤</button>
-            <button class="action-btn" title="Close" @click="emit('close')">✕</button>
+            <button class="action-btn" title="Close (Esc)" @click="emit('close')">✕</button>
           </div>
         </div>
-        <!-- Tabs -->
+        <!-- Tabs: primary + More -->
         <div class="agent-tabs">
           <button
-            v-for="tab in tabs"
+            v-for="tab in primaryTabs"
             :key="tab"
             class="agent-tab"
             :class="{ active: activeTab === tab.toLowerCase() }"
@@ -245,9 +270,34 @@ function onTabClick(tab: string) {
           >
             {{ tab }}
           </button>
+          <div class="more-wrap">
+            <button
+              type="button"
+              class="agent-tab more-btn"
+              :class="{ active: moreActive }"
+              @click="showMore = !showMore"
+            >
+              {{ moreLabel }}
+              <svg class="more-chevron" :class="{ rotated: showMore }" width="10" height="10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div v-if="showMore" class="more-dropdown">
+              <button
+                v-for="tab in moreTabs"
+                :key="tab"
+                type="button"
+                class="more-item"
+                :class="{ active: activeTab === tab.toLowerCase() }"
+                @click="onTabClick(tab)"
+              >
+                {{ tab }}
+              </button>
+            </div>
+          </div>
         </div>
-        <!-- Content -->
-        <div class="max-h-80 overflow-y-auto">
+        <!-- Content: fills remaining workspace height -->
+        <div class="agent-workspace-body" :class="{ 'agent-workspace-body--tall': isTallTab }">
           <InfoPanel v-if="activeTab === 'info' && agent" :agent-id="agent.id" />
           <ChatPanel v-else-if="activeTab === 'chat' && agent" :agent-id="agent.id" />
           <SlicePlaysPanel v-else-if="activeTab === 'slice plays' && agent" :agent-id="agent.id" :agent-status="agent.status" />
@@ -376,25 +426,28 @@ function onTabClick(tab: string) {
   inset: 0;
   z-index: 200;
   display: none;
-  background: rgba(0,0,0,0.7);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0,0,0,0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 .overlay.open {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 16px;
 }
 .overlay-panel {
-  width: 90vw;
-  max-width: 700px;
-  max-height: 85vh;
+  width: min(96vw, 1400px);
+  height: min(92vh, 920px);
+  max-height: 92vh;
   background: #0C0C10;
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 24px;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 24px 80px rgba(0,0,0,0.8);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.85);
   animation: slideUp 0.4s cubic-bezier(0.32,0.72,0,1);
+  display: flex;
+  flex-direction: column;
 }
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(20px) scale(0.98); }
@@ -404,18 +457,22 @@ function onTabClick(tab: string) {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 18px 24px;
+  padding: 16px 22px;
   border-bottom: 1px solid rgba(255,255,255,0.05);
   background: rgba(255,255,255,0.02);
+  flex-shrink: 0;
 }
 .agent-tabs {
   display: flex;
+  align-items: center;
   gap: 2px;
-  padding: 0 24px;
+  padding: 0 16px;
   border-bottom: 1px solid rgba(255,255,255,0.04);
+  flex-shrink: 0;
+  position: relative;
 }
 .agent-tab {
-  padding: 12px 18px;
+  padding: 12px 16px;
   font-size: 12.5px;
   font-weight: 500;
   color: rgba(255,255,255,0.3);
@@ -425,11 +482,66 @@ function onTabClick(tab: string) {
   position: relative;
   transition: all 0.3s cubic-bezier(0.32,0.72,0,1);
   border-bottom: 2px solid transparent;
+  font-family: inherit;
+  white-space: nowrap;
 }
 .agent-tab:hover { color: rgba(255,255,255,0.5); }
 .agent-tab.active {
   color: rgba(255,255,255,0.85);
   border-bottom-color: #9DD522;
+}
+.more-wrap { position: relative; }
+.more-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.more-chevron { transition: transform 0.2s ease; opacity: 0.5; }
+.more-chevron.rotated { transform: rotate(180deg); }
+.more-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 160px;
+  background: rgba(12, 12, 16, 0.98);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  z-index: 20;
+  max-height: 50vh;
+  overflow-y: auto;
+}
+.more-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  color: rgba(255,255,255,0.45);
+  font-size: 12.5px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+}
+.more-item:hover { background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.8); }
+.more-item.active { background: rgba(157,213,34,0.12); color: #E9ECE0; }
+.agent-workspace-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.agent-workspace-body--tall {
+  overflow: hidden;
+}
+.agent-workspace-body--tall > * {
+  flex: 1;
+  min-height: 0;
+  height: 100%;
 }
 .action-btn {
   width: 34px;
@@ -688,6 +800,13 @@ function onTabClick(tab: string) {
   background: rgba(255,255,255,0.04);
 }
 @media (max-width: 768px) {
-  .overlay-panel { width: 98vw; max-height: 95vh; border-radius: 20px; }
+  .overlay-panel {
+    width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+  .overlay.open { padding: 0; }
+  .agent-tab { padding: 10px 12px; font-size: 12px; }
 }
 </style>

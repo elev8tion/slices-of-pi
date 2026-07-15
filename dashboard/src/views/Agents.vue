@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { useAppStore, type Agent } from '@/stores/app'
-import NavIsland from '@/components/NavIsland.vue'
-import Sidebar from '@/components/Sidebar.vue'
+import AppShell from '@/components/AppShell.vue'
+import PageHeader from '@/components/PageHeader.vue'
 import AgentDetail from '@/components/AgentDetail.vue'
 import ResourceModal from '@/components/ResourceModal.vue'
 
 const store = useAppStore()
 const selectedAgent = ref<Agent | null>(null)
+const startTab = ref<string | undefined>(undefined)
 const search = ref('')
 const statusFilter = ref('')
 const showCreate = ref(false)
@@ -24,6 +25,7 @@ const filteredAgents = computed(() => {
 
 onMounted(() => {
   store.fetchAgents()
+  store.fetchActivities()
   store.connectWebSocket()
 })
 
@@ -36,6 +38,28 @@ async function deleteAgent(id: string) {
   await store.deleteAgent(id)
 }
 
+function openDetail(agent: Agent, tab?: string) {
+  selectedAgent.value = agent
+  startTab.value = tab
+}
+function closeDetail() {
+  selectedAgent.value = null
+  startTab.value = undefined
+}
+
+watch(() => store.commandOpenAgentId, (id) => {
+  if (!id) return
+  const agent = store.agents.find(a => a.id === id)
+  if (agent) openDetail(agent, store.commandOpenTab || 'chat')
+  store.clearCommandOpenAgent()
+})
+watch(() => store.requestCreateAgent, (v) => {
+  if (v) {
+    showCreate.value = true
+    store.clearRequestCreateAgent()
+  }
+})
+
 const statusColors: Record<string, string> = {
   idle: 'bg-success/10 text-success border-success/15',
   busy: 'bg-warning/10 text-warning border-warning/15',
@@ -44,78 +68,74 @@ const statusColors: Record<string, string> = {
   stopped: 'bg-gray-500/10 text-gray-400 border-gray-500/15',
   created: 'bg-white/5 text-text-tertiary border-white/8',
 }
+
+const rowGlow = (agent: Agent) => {
+  const classes: string[] = []
+  if (agent.status === 'busy' || agent.status === 'running') classes.push('agent-card-glow-busy')
+  if (agent.status === 'error') classes.push('agent-card-glow-error')
+  if (store.statusFlash[agent.id]) classes.push('agent-card-glow-flash')
+  return classes
+}
 </script>
 
 <template>
-  <NavIsland />
-  <div class="dashboard">
-    <Sidebar />
-    <main class="main">
-      <div class="dash-header">
-        <div class="dash-title">
-          <h1>Agents</h1>
-          <p>{{ store.agents.length }} total · {{ store.onlineAgents }} online</p>
-        </div>
+  <AppShell>
+    <PageHeader
+      title="Agents"
+      :subtitle="`${store.agents.length} total · ${store.onlineAgents} online`"
+    >
+      <template #actions>
         <button class="btn-primary" @click="showCreate = true">
           + New agent
         </button>
-      </div>
+      </template>
+    </PageHeader>
 
-      <!-- Filters -->
-      <div class="flex items-center gap-3 mb-4">
-        <input v-model="search" placeholder="Search agents..." class="input-base w-48 text-xs" />
-        <select v-model="statusFilter" class="bg-transparent backdrop-blur-sm border border-white/12 rounded-btn px-2 py-1.5 text-xs text-text-tertiary outline-none">
-          <option value="">All statuses</option>
-          <option value="idle">Idle</option>
-          <option value="busy">Busy</option>
-          <option value="error">Error</option>
-          <option value="stopped">Stopped</option>
-        </select>
-      </div>
+    <!-- Filters -->
+    <div class="flex items-center gap-3 mb-4 fade-up fade-up-d3">
+      <input v-model="search" placeholder="Search agents..." class="input-base w-48 text-xs" />
+      <select v-model="statusFilter" class="input-base text-xs text-text-tertiary">
+        <option value="">All statuses</option>
+        <option value="idle">Idle</option>
+        <option value="busy">Busy</option>
+        <option value="error">Error</option>
+        <option value="stopped">Stopped</option>
+      </select>
+    </div>
 
-      <!-- Agent list -->
-      <div v-if="store.agents.length === 0" class="card p-8 text-center text-text-tertiary text-sm">
-        <p class="mb-3">No local agents yet.</p>
-        <button type="button" class="btn-primary text-xs px-4 py-2" @click="showCreate = true">
-          Create your first agent
+    <!-- Agent list -->
+    <div v-if="store.agents.length === 0" class="card p-8 text-center text-text-tertiary text-sm fade-up fade-up-d4">
+      <p class="mb-3">No local agents yet.</p>
+      <button type="button" class="btn-primary text-xs px-4 py-2" @click="showCreate = true">
+        Create your first agent
+      </button>
+    </div>
+
+    <div v-else class="flex flex-col gap-2 fade-up fade-up-d4">
+      <div
+        v-for="agent in filteredAgents"
+        :key="agent.id"
+        class="card p-4 flex items-center gap-4 cursor-pointer hover:border-accent/20 transition-colors"
+        :class="rowGlow(agent)"
+        @click="openDetail(agent)"
+      >
+        <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold bg-accent/15 text-accent shrink-0">
+          {{ agent.name[0].toUpperCase() }}
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-sm font-semibold text-text-primary">{{ agent.name }}</div>
+          <div class="text-[11px] text-text-tertiary">{{ agent.model || 'pi default' }} · {{ agent.session_count }} sessions</div>
+        </div>
+        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0" :class="statusColors[agent.status] || statusColors.created">
+          {{ agent.status }}
+        </span>
+        <span class="text-xs text-text-muted font-mono shrink-0">{{ agent.tokens_used.toLocaleString() }} tok</span>
+        <button @click.stop="deleteAgent(agent.id)" class="text-[11px] text-text-muted hover:text-danger transition-colors shrink-0 ml-2">
+          Delete
         </button>
       </div>
-
-      <div v-else class="flex flex-col gap-2">
-        <div
-          v-for="agent in filteredAgents"
-          :key="agent.id"
-          class="card p-4 flex items-center gap-4 cursor-pointer hover:border-accent/20 transition-colors"
-          @click="selectedAgent = agent"
-        >
-          <div class="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold bg-accent/15 text-[#818CF8] shrink-0">
-            {{ agent.name[0].toUpperCase() }}
-          </div>
-          <div class="flex-1 min-w-0">
-            <div class="text-sm font-semibold text-text-primary">{{ agent.name }}</div>
-            <div class="text-[11px] text-text-tertiary">{{ agent.model || 'pi default' }} · {{ agent.session_count }} sessions</div>
-          </div>
-          <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0" :class="statusColors[agent.status] || statusColors.created">
-            {{ agent.status }}
-          </span>
-          <span class="text-xs text-text-muted font-mono shrink-0">{{ agent.tokens_used.toLocaleString() }} tok</span>
-          <button @click.stop="deleteAgent(agent.id)" class="text-[11px] text-text-muted hover:text-danger transition-colors shrink-0 ml-2">
-            Delete
-          </button>
-        </div>
-      </div>
-    </main>
-  </div>
-  <AgentDetail :agent="selectedAgent" @close="selectedAgent = null" />
+    </div>
+  </AppShell>
+  <AgentDetail :agent="selectedAgent" :start-tab="startTab" @close="closeDetail" />
   <ResourceModal v-model:show="showCreate" @create="onCreateAgent" />
 </template>
-
-<style scoped>
-.dashboard { display: flex; gap: 0; padding: 24px 32px 32px; margin-top: 8px; max-width: 1440px; margin-left: auto; margin-right: auto; }
-.main { flex: 1; min-width: 0; }
-.dash-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
-.dash-title h1 { font-family: 'Clash Display', sans-serif; font-size: 26px; font-weight: 600; letter-spacing: -0.03em; color: #F0F0F2; }
-.dash-title p { font-size: 13px; color: rgba(255,255,255,0.3); font-weight: 500; margin-top: 2px; }
-
-@media (max-width: 968px) { .dashboard { padding: 16px; } }
-</style>

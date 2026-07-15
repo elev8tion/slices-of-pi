@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import NavIsland from '@/components/NavIsland.vue'
-import Sidebar from '@/components/Sidebar.vue'
+import AppShell from '@/components/AppShell.vue'
+import PageHeader from '@/components/PageHeader.vue'
 import SystemConsole from '@/components/SystemConsole.vue'
 import SystemFlixzPanel from '@/components/SystemFlixzPanel.vue'
 
@@ -29,30 +29,24 @@ async function checkMossy() {
 
 onMounted(() => {
   checkMossy()
-  setInterval(checkMossy, 30000) // Poll every 30s
+  setInterval(checkMossy, 30000)
 })
 </script>
 
 <template>
-  <NavIsland />
-  <div class="console-page">
-    <Sidebar />
-    <main class="main">
-      <!-- Header -->
-      <div class="console-header fade-up">
-        <div class="console-title">
-          <h1>System Console</h1>
-          <p>Live orchestrator log stream — <code class="inline-code">~/.pi/agent/orchestrator.log</code></p>
-        </div>
-        <div class="mossy-status" :class="mossyStatus">
-          <span class="mossy-dot" />
-          <span class="mossy-label">
-            {{ mossyStatus === 'checking' ? 'TTS...' : mossyStatus === 'online' ? 'Mossy TTS' : 'Mossy Offline' }}
-          </span>
-        </div>
-      </div>
+  <AppShell>
+    <div class="console-inner">
+      <PageHeader title="System Console" subtitle="Live orchestrator log stream — ~/.pi/agent/orchestrator.log">
+        <template #actions>
+          <div class="mossy-status" :class="mossyStatus">
+            <span class="mossy-dot" />
+            <span class="mossy-label">
+              {{ mossyStatus === 'checking' ? 'TTS...' : mossyStatus === 'online' ? 'Mossy TTS' : 'Mossy Offline' }}
+            </span>
+          </div>
+        </template>
+      </PageHeader>
 
-      <!-- Tab bar -->
       <div class="console-tabs">
         <button
           v-for="tab in tabs"
@@ -66,58 +60,19 @@ onMounted(() => {
         </button>
       </div>
 
-      <!-- Console body -->
-      <div class="console-body fade-up fade-up-d2">
+      <div class="console-body fade-up fade-up-d3">
         <SystemConsole v-if="activeTab === 'logs'" />
         <SystemFlixzPanel v-else-if="activeTab === 'flixz'" />
       </div>
-    </main>
-  </div>
+    </div>
+  </AppShell>
 </template>
 
 <style scoped>
-.console-page {
-  display: flex;
-  gap: 0;
-  padding: 24px 32px 32px;
-  margin-top: 8px;
-  max-width: 1440px;
-  margin-left: auto;
-  margin-right: auto;
-  height: calc(100vh - 60px);
-}
-.main {
-  flex: 1;
-  min-width: 0;
+.console-inner {
   display: flex;
   flex-direction: column;
-}
-.console-header {
-  margin-bottom: 16px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-}
-.console-title h1 {
-  font-family: 'Clash Display', sans-serif;
-  font-size: 26px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: #F0F0F2;
-}
-.console-title p {
-  font-size: 13px;
-  color: rgba(255,255,255,0.3);
-  font-weight: 500;
-  margin-top: 2px;
-}
-.inline-code {
-  font-family: 'JetBrains Mono', Menlo, monospace;
-  font-size: 12px;
-  background: rgba(255,255,255,0.04);
-  padding: 1px 6px;
-  border-radius: 4px;
-  color: rgba(255,255,255,0.5);
+  min-height: calc(100vh - 100px);
 }
 .console-body {
   flex: 1;
@@ -127,13 +82,11 @@ onMounted(() => {
   background: rgba(255,255,255,0.01);
   overflow: auto;
 }
-
 .console-tabs {
   display: flex;
   gap: 4px;
   margin-bottom: 2px;
 }
-
 .console-tab {
   display: flex;
   align-items: center;
@@ -149,41 +102,17 @@ onMounted(() => {
   transition: all 0.2s;
   font-family: inherit;
 }
-
 .console-tab:hover {
   color: rgba(255,255,255,0.55);
   background: rgba(255,255,255,0.02);
 }
-
 .console-tab.active {
   color: rgba(255,255,255,0.8);
   background: rgba(255,255,255,0.03);
   border-color: rgba(255,255,255,0.06);
   border-bottom-color: transparent;
 }
-
-.console-tab-icon {
-  font-size: 13px;
-}
-
-.fade-up {
-  opacity: 0;
-  transform: translateY(16px);
-  animation: fadeUp 0.7s cubic-bezier(0.32,0.72,0,1) forwards;
-}
-.fade-up-d2 {
-  animation-delay: 0.1s;
-}
-@keyframes fadeUp {
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@media (max-width: 968px) {
-  .console-page {
-    padding: 16px;
-    flex-direction: column;
-  }
-}
+.console-tab-icon { font-size: 13px; }
 
 .mossy-status {
   display: flex;
@@ -196,46 +125,38 @@ onMounted(() => {
   border: 1px solid;
   transition: all 0.3s;
 }
-
 .mossy-status.checking {
   background: rgba(255,255,255,0.02);
   border-color: rgba(255,255,255,0.06);
   color: rgba(255,255,255,0.3);
 }
-
 .mossy-status.online {
   background: rgba(34,197,94,0.06);
   border-color: rgba(34,197,94,0.15);
   color: #4ADE80;
 }
-
 .mossy-status.offline {
   background: rgba(255,255,255,0.02);
   border-color: rgba(255,255,255,0.05);
   color: rgba(255,255,255,0.2);
 }
-
 .mossy-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
   flex-shrink: 0;
 }
-
 .mossy-status.online .mossy-dot {
   background: #4ADE80;
   box-shadow: 0 0 6px rgba(74,222,128,0.4);
 }
-
 .mossy-status.offline .mossy-dot {
   background: rgba(255,255,255,0.2);
 }
-
 .mossy-status.checking .mossy-dot {
   background: rgba(255,255,255,0.3);
   animation: pulse 1.5s ease-in-out infinite;
 }
-
 @keyframes pulse {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 1; }

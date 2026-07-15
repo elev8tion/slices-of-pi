@@ -3,6 +3,7 @@ import { ref, onMounted } from 'vue'
 import ToastContainer from './components/ToastContainer.vue'
 import OnboardingChecklist from './components/OnboardingChecklist.vue'
 import EditorHelpPanel from './components/EditorHelpPanel.vue'
+import CommandPalette from './components/CommandPalette.vue'
 import { toastBus } from './main'
 
 const toastRef = ref<InstanceType<typeof ToastContainer> | null>(null)
@@ -20,4 +21,5 @@ onMounted(() => {
   <ToastContainer ref="toastRef" />
   <OnboardingChecklist />
   <EditorHelpPanel />
+  <CommandPalette />
 </template>

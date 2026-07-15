@@ -20,6 +20,11 @@ dev = [
     "httpx>=0.27",
     "ruff>=0.8",
 ]
+# Secondary STT: Parakeet ONNX (Handy model dir). Requires Python ≥3.10.
+#   pip install 'pi-orchestrator[parakeet]'   # or: python3.11 -m pip install 'onnx-asr[cpu]'
+parakeet = [
+    "onnx-asr[cpu]>=0.10",
+]
 
 [build-system]
 requires = ["setuptools>=69"]

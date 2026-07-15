@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import NavIsland from '@/components/NavIsland.vue'
-import Sidebar from '@/components/Sidebar.vue'
+import AppShell from '@/components/AppShell.vue'
+import PageHeader from '@/components/PageHeader.vue'
 import OperatorQueue from '@/components/OperatorQueue.vue'
 
 interface QueueStats {
@@ -30,20 +30,11 @@ onMounted(fetchStats)
 </script>
 
 <template>
-  <NavIsland />
-  <div class="ops-page">
-    <Sidebar />
-    <main class="main">
-      <!-- Header -->
-      <div class="ops-header fade-up">
-        <div class="ops-title">
-          <h1>Operator Room</h1>
-          <p>Items requiring your attention</p>
-        </div>
-      </div>
+  <AppShell>
+    <div class="ops-inner">
+      <PageHeader title="Operator Room" subtitle="Items requiring your attention" />
 
-      <!-- Stats bar -->
-      <div class="ops-stats fade-up fade-up-d2">
+      <div class="ops-stats fade-up fade-up-d3">
         <div class="ops-stat">
           <span class="ops-stat-value" style="color:#F59E0B">{{ stats.pending }}</span>
           <span class="ops-stat-label">Pending</span>
@@ -66,100 +57,51 @@ onMounted(fetchStats)
         </div>
       </div>
 
-      <!-- Queue -->
-      <div class="ops-queue fade-up fade-up-d3">
+      <div class="ops-queue fade-up fade-up-d4">
         <OperatorQueue />
       </div>
-    </main>
-  </div>
+    </div>
+  </AppShell>
 </template>
 
 <style scoped>
-.ops-page {
-  display: flex;
-  gap: 0;
-  padding: 24px 32px 32px;
-  margin-top: 8px;
-  max-width: 1440px;
-  margin-left: auto;
-  margin-right: auto;
-  height: calc(100vh - 60px);
-}
-.main {
-  flex: 1;
-  min-width: 0;
+.ops-inner {
   display: flex;
   flex-direction: column;
-}
-.ops-header {
-  margin-bottom: 16px;
-}
-.ops-title h1 {
-  font-family: 'Clash Display', sans-serif;
-  font-size: 26px;
-  font-weight: 600;
-  letter-spacing: -0.03em;
-  color: #F0F0F2;
-}
-.ops-title p {
-  font-size: 13px;
-  color: rgba(255,255,255,0.3);
-  font-weight: 500;
-  margin-top: 2px;
+  min-height: calc(100vh - 100px);
 }
 .ops-stats {
   display: flex;
-  gap: 8px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
 }
 .ops-stat {
   flex: 1;
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.04);
-  border-radius: 12px;
+  min-width: 100px;
   padding: 14px 16px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 .ops-stat-value {
-  font-size: 22px;
-  font-weight: 700;
-  font-family: 'Clash Display', sans-serif;
+  font-size: 24px;
+  font-weight: 600;
   letter-spacing: -0.03em;
-  color: #F0F0F2;
+  color: #E9ECE0;
 }
 .ops-stat-label {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 500;
   color: rgba(255,255,255,0.3);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
 }
 .ops-queue {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-}
-
-.fade-up {
-  opacity: 0;
-  transform: translateY(16px);
-  animation: fadeUp 0.7s cubic-bezier(0.32,0.72,0,1) forwards;
-}
-.fade-up-d2 { animation-delay: 0.1s; }
-.fade-up-d3 { animation-delay: 0.2s; }
-@keyframes fadeUp {
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@media (max-width: 968px) {
-  .ops-page {
-    padding: 16px;
-    flex-direction: column;
-    height: auto;
-  }
-  .ops-stats { flex-wrap: wrap; }
-  .ops-stat { min-width: calc(33% - 8px); }
 }
 </style>

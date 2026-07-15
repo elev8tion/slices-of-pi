@@ -137,9 +137,25 @@ function navTo(path: string) {
     </div>
 
     <div class="nav-divider nav-divider-desktop" />
-    <div class="nav-actions">
+    <div
+      class="nav-actions"
+      :class="{ 'nav-connection-offline': !store.connected }"
+      :title="store.connected ? 'Event bus live' : 'Event bus offline — reconnecting'"
+    >
       <StatusIndicator :status="store.connected ? 'online' : 'offline'" size="md" :pulse="store.connected" />
-      <span class="connection-label">{{ store.connected ? 'Connected' : 'Offline' }}</span>
+      <span class="connection-label" :class="{ 'text-danger': !store.connected }">
+        {{ store.connected ? 'Connected' : 'Offline' }}
+      </span>
+      <span
+        v-if="store.errorAgents > 0"
+        class="nav-alert-badge"
+        title="Agents in error"
+      >{{ store.errorAgents }}</span>
+      <span
+        v-else-if="store.busyAgents > 0"
+        class="nav-busy-badge"
+        title="Agents busy"
+      >{{ store.busyAgents }} busy</span>
     </div>
 
     <!-- Mobile hamburger -->
@@ -248,6 +264,16 @@ function navTo(path: string) {
 }
 .voice-icon-btn:hover { background: rgba(157,213,34,0.12); transform: scale(1.1); }
 .connection-label { font-size: 11px; color: rgba(233,236,224,0.35); font-weight: 500; white-space: nowrap; }
+.connection-label.text-danger { color: #EF4444; }
+.nav-alert-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 9999px;
+  background: rgba(239, 68, 68, 0.15); color: #EF4444;
+  animation: offlinePulse 1.5s ease-in-out infinite;
+}
+.nav-busy-badge {
+  font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 9999px;
+  background: rgba(157, 213, 34, 0.12); color: #9DD522;
+}
 
 .hamburger-btn { display: none; flex-direction: column; gap: 3px; background: none; border: none; cursor: pointer; padding: 6px; border-radius: 8px; }
 .hamburger-line { display: block; width: 18px; height: 2px; background: rgba(233,236,224,0.5); border-radius: 2px; transition: all 0.3s ease; }

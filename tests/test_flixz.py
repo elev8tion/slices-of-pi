@@ -115,7 +115,7 @@ class TestFlixzRouter:
             "fps": 0,
             "scene_detect": True,
             "transcript": "none",
-            "describe": "gemini",
+            "describe": "none",
         })
         assert r.status_code in (200, 500)
         data = r.json()
