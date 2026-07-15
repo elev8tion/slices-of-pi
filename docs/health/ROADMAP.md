@@ -17,15 +17,15 @@
 | **A5** | Align system_chat `create_agent` call with `db.create_agent` / service API | S | Voice/system create agent works | BACKEND P1 |
 | **A6** | Live e2e: start orchestrator in fixture **or** mark `test_e2e_api` integration-only | S | Full pytest either green or clearly split | TEST_REPORT |
 
-## Track B — Harden (localhost, not multi-tenant)
+## Track B — Harden (localhost, not multi-tenant) — **DONE 2026-07-15**
 
 | ID | Work | Effort | Acceptance | Evidence |
 |----|------|--------|------------|----------|
-| **B1** | Files path resolution: use resolved Path compare, not `startswith` | S | Path-traversal tests pass | BACKEND/SECURITY P1 |
-| **B2** | Session workspace: one rule for agent_id vs name (chat/terminal/files) | M | Terminal and chat hit same session root | BACKEND P1 |
-| **B3** | Flixz: restrict paths to agent workspace / explicit allowlist | M | Cannot pass arbitrary system paths | BACKEND P1 |
-| **B4** | Warn in logs if `PI_ORCHESTRATOR_HOST` is not loopback | S | Log warning on non-127.0.0.1 bind | SECURITY |
-| **B5** | Credentials: stop returning full plaintext on casual GET **or** document + gate for operator-only local | S | Values endpoint behavior matches docs | BACKEND P1 |
+| **B1** | Files path resolution: use resolved Path compare, not `startswith` | S | Path-traversal tests pass | See TRACK_B_STATUS |
+| **B2** | Session workspace: one rule for agent_id vs name (chat/terminal/files) | M | Terminal and chat hit same session root | See TRACK_B_STATUS |
+| **B3** | Flixz: restrict paths to agent workspace / explicit allowlist | M | Cannot pass arbitrary system paths | See TRACK_B_STATUS |
+| **B4** | Warn in logs if `PI_ORCHESTRATOR_HOST` is not loopback | S | Log warning on non-127.0.0.1 bind | See TRACK_B_STATUS |
+| **B5** | Credentials: stop returning full plaintext on casual GET **or** document + gate for operator-only local | S | Values endpoint behavior matches docs | See TRACK_B_STATUS |
 
 ## Track C — Local product polish
 

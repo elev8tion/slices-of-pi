@@ -126,6 +126,16 @@ async def lifespan(app: FastAPI):
     else:
         logger.info("Cleanup service disabled")
 
+    # T1 harden B4: warn if bind is not loopback (open control plane risk)
+    if HOST not in ("127.0.0.1", "localhost", "::1"):
+        logger.warning(
+            "PI_ORCHESTRATOR_HOST=%s is not loopback — API/dashboard are reachable "
+            "beyond this machine. For local single-operator use, bind 127.0.0.1. "
+            "Do not expose port %s without an external gate.",
+            HOST,
+            PORT,
+        )
+
     logger.info(f"Pi Orchestrator starting on {HOST}:{PORT}")
 
     yield

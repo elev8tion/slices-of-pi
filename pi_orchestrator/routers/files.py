@@ -39,14 +39,33 @@ def _get_agent(agent_id: str) -> dict:
     return agent
 
 
+def _is_within(base: Path, target: Path) -> bool:
+    """True if target is base or a descendant (resolved paths)."""
+    try:
+        target.resolve().relative_to(base.resolve())
+        return True
+    except ValueError:
+        return False
+
+
 def _safe_resolve(base: Path, requested: str) -> Path:
-    """Resolve a path relative to base, rejecting traversal."""
-    # Normalise — strip leading / or ./
-    clean = requested.lstrip("/").lstrip("./")
-    if not clean:
+    """Resolve a path relative to base, rejecting traversal.
+
+    Uses Path.relative_to (not str.startswith) so sibling prefixes like
+    base+'/evil' cannot escape base.
+    """
+    base = base.resolve()
+    # Normalise separators only — do NOT use str.lstrip("./") (that strips
+    # all leading dots and turns "../x" into "x", hiding traversal).
+    clean = requested.replace("\\", "/").strip()
+    while clean.startswith("/"):
+        clean = clean[1:]
+    if clean.startswith("./"):
+        clean = clean[2:]
+    if not clean or clean == ".":
         return base
     target = (base / clean).resolve()
-    if not str(target).startswith(str(base.resolve())):
+    if not _is_within(base, target):
         raise HTTPException(status_code=403, detail="Path traversal denied")
     return target
 

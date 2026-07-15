@@ -54,9 +54,13 @@ async function toggleReveal() {
   }
   revealing.value = true
   try {
-    const res = await fetch(`${BASE(props.agentId)}/values`)
+    const res = await fetch(`${BASE(props.agentId)}/values?reveal=1`)
     if (res.ok) {
       revealedValues.value = await res.json()
+    } else {
+      const err = await res.json().catch(() => ({}))
+      toastBus.error(err.detail || 'Failed to reveal credentials')
+      revealing.value = false
     }
   } catch {
     toastBus.error('Failed to reveal credentials')

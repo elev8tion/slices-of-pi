@@ -1,18 +1,22 @@
 """
 Credentials router — per-agent API key management.
 
-All values are encrypted at rest. The API never returns plaintext
-values — only masked placeholders. Decrypted values are injected as
-environment variables when launching pi sessions.
+Values are encrypted at rest. List/create/delete return masked values only.
+Decrypted values are available only via GET .../values?reveal=1 for the
+local operator reveal UI (not for casual unauthenticated scraping).
+
+Note: injection into pi session env is not yet wired in stream_chat;
+reveal is for operator inspection on a localhost single-operator setup.
 """
 
 from __future__ import annotations
 
 import logging
+import os
 import secrets
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from .. import database as db
 from ..config import DATABASE_PATH
@@ -21,6 +25,9 @@ from ..services.audit_service import log_credential_set, log_credential_deleted
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/agents/{agent_id}/credentials", tags=["credentials"])
+
+# Local operator may disable reveal entirely: PI_ALLOW_CREDENTIAL_VALUES=0
+_ALLOW_REVEAL = os.getenv("PI_ALLOW_CREDENTIAL_VALUES", "1").lower() not in ("0", "false", "no")
 
 
 # ── Encryption ────────────────────────────────────────────────────
@@ -156,8 +163,25 @@ async def delete_credential(agent_id: str, credential_name: str):
 
 
 @router.get("/values")
-async def get_credential_values(agent_id: str):
-    """Return all credential values for an agent (decrypted)."""
+async def get_credential_values(
+    agent_id: str,
+    reveal: bool = Query(False, description="Must be true to return decrypted values"),
+):
+    """Return decrypted credential values (operator reveal only).
+
+    Requires ?reveal=1. Disabled entirely when PI_ALLOW_CREDENTIAL_VALUES=0.
+    Without reveal=1, returns 400 so casual GET does not dump secrets.
+    """
+    if not _ALLOW_REVEAL:
+        raise HTTPException(
+            status_code=403,
+            detail="Credential reveal disabled (PI_ALLOW_CREDENTIAL_VALUES=0)",
+        )
+    if not reveal:
+        raise HTTPException(
+            status_code=400,
+            detail="Pass ?reveal=1 to decrypt values (local operator confirm)",
+        )
     agent = db.get_agent(agent_id)
     if not agent:
         raise HTTPException(status_code=404, detail="Agent not found")
@@ -165,4 +189,5 @@ async def get_credential_values(agent_id: str):
     rows = conn.execute(
         "SELECT name, value FROM credentials WHERE agent_id = ?", (agent_id,)
     ).fetchall()
+    logger.info("Credential values revealed for agent %s", agent_id)
     return {r["name"]: _decrypt_value(r["value"]) for r in rows}

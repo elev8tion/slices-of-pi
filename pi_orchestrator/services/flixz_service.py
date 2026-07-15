@@ -18,15 +18,49 @@ from pathlib import Path
 from typing import Optional
 
 from .. import database as db
-from ..config import PI_HOME
+from ..config import PI_HOME, PI_AGENT_DIR, PI_MANAGED_SESSIONS_DIR
 
 logger = logging.getLogger(__name__)
 
 FLIXZ_OUTPUT_DIR = PI_HOME / "flixz" / "output"
+FLIXZ_INPUT_DIR = PI_HOME / "flixz" / "input"
 FLIXZ_DEFAULT_TIMEOUT = int(os.getenv("PI_FLIXZ_TIMEOUT", "600"))  # 10 minutes
 FFMPEG_BINARY = shutil.which("ffmpeg") or "/opt/homebrew/bin/ffmpeg"
 FFPROBE_BINARY = shutil.which("ffprobe") or "/opt/homebrew/bin/ffprobe"
 YTDLP_BINARY = shutil.which("yt-dlp") or shutil.which("youtube-dl")
+
+
+def _path_is_within(base: Path, target: Path) -> bool:
+    try:
+        target.resolve().relative_to(base.resolve())
+        return True
+    except ValueError:
+        return False
+
+
+def _local_video_allowed(expanded: Path, agent_id: Optional[str] = None) -> bool:
+    """Local video files must sit under an explicit allowlist (T1 harden B3)."""
+    roots: list[Path] = [
+        FLIXZ_INPUT_DIR,
+        FLIXZ_OUTPUT_DIR,
+        PI_HOME / "flixz",
+        PI_MANAGED_SESSIONS_DIR,
+        PI_AGENT_DIR,
+    ]
+    # Extra roots from env (colon-separated), for local operator media folders
+    extra = os.getenv("PI_FLIXZ_ALLOW_ROOTS", "")
+    for part in extra.split(":"):
+        part = part.strip()
+        if part:
+            roots.append(Path(os.path.expanduser(part)))
+
+    if agent_id:
+        agent = db.get_agent(agent_id)
+        if agent:
+            roots.append(PI_MANAGED_SESSIONS_DIR / agent["name"])
+
+    resolved = expanded.resolve()
+    return any(_path_is_within(root, resolved) for root in roots if root)
 
 # VoiceKit CLI for native macOS transcription (Apple SFSpeechRecognizer, on-device)
 _PRISMAKIT_ROOT = Path(os.getenv("PRISMAKIT_ROOT", str(Path.home() / "prismakit")))
@@ -57,19 +91,30 @@ async def _run_ffprobe(video_path: str) -> dict:
         return {}
 
 
-async def _resolve_video_path(video_path: str, output_dir: Path, timeout_seconds: int = 300) -> str:
+async def _resolve_video_path(
+    video_path: str,
+    output_dir: Path,
+    timeout_seconds: int = 300,
+    agent_id: Optional[str] = None,
+) -> str:
     """Resolve a video path that might be a URL, returning a local file path.
-    
+
     Handles:
-    - Local file paths (returned as-is)
-    - YouTube / direct video URLs (downloaded via yt-dlp)
+    - Local file paths under allowlisted roots (see _local_video_allowed)
+    - YouTube / direct video URLs (downloaded via yt-dlp into output_dir)
     """
-    # Local file — nothing to do
+    # Local file — must be under allowlist (not arbitrary system paths)
     if not video_path.startswith(("http://", "https://")):
-        expanded = os.path.expanduser(video_path)
-        if not os.path.isfile(expanded):
+        expanded = Path(os.path.expanduser(video_path)).expanduser()
+        if not expanded.is_file():
             raise RuntimeError(f"Video file not found: {expanded}")
-        return expanded
+        if not _local_video_allowed(expanded, agent_id=agent_id):
+            raise RuntimeError(
+                "Local video path not allowed. Place files under "
+                f"~/.pi/flixz/input, agent session dir, or set PI_FLIXZ_ALLOW_ROOTS. "
+                f"Got: {expanded}"
+            )
+        return str(expanded.resolve())
 
     # URL — try yt-dlp
     if not YTDLP_BINARY:
@@ -399,10 +444,11 @@ async def extract_video(
     )
 
     try:
-        # ── 0. Resolve path (download URL if needed) ──────────
+        # ── 0. Resolve path (download URL if needed; local path allowlist) ──
         resolved_path = await _resolve_video_path(
             video_path, output_dir,
             timeout_seconds=min(timeout, 600),
+            agent_id=agent_id,
         )
 
         # ── 1. Get video metadata ──────────────────────────────

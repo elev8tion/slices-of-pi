@@ -25,6 +25,7 @@ from pathlib import Path
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 
 from ..config import PI_BINARY, PI_MANAGED_SESSIONS_DIR
+from .. import database as db
 from ..services.ws_ticket_service import ws_ticket_service
 from datetime import datetime, timezone
 
@@ -33,6 +34,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 _terminals: dict[str, int] = {}
+
+
+def _agent_workspace(agent_id: str) -> Path:
+    """Session/workspace root for an agent — always by agent *name* (matches chat/files)."""
+    agent = db.get_agent(agent_id)
+    if not agent:
+        # Fallback keeps old id-based dir only when agent missing mid-session
+        return PI_MANAGED_SESSIONS_DIR / agent_id
+    return PI_MANAGED_SESSIONS_DIR / agent["name"]
 
 
 def _set_winsize(fd: int, rows: int, cols: int) -> None:
@@ -82,7 +92,7 @@ async def terminal_websocket(websocket: WebSocket, agent_id: str, ticket: str = 
         await websocket.close(code=4004, reason="pi binary not found")
         return
 
-    session_dir = PI_MANAGED_SESSIONS_DIR / agent_id
+    session_dir = _agent_workspace(agent_id)
     session_dir.mkdir(parents=True, exist_ok=True)
     session_file = session_dir / f"terminal-{secrets.token_hex(6)}.jsonl"
 
