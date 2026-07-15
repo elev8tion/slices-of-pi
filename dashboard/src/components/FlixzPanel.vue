@@ -448,6 +448,12 @@ function clearResult() {
 .flixz-select:focus {
   border-color: #9DD522;
 }
+.flixz-hint {
+  font-size: 10px;
+  color: rgba(255,255,255,0.3);
+  line-height: 1.35;
+  margin-top: 4px;
+}
 
 /* Actions */
 .flixz-actions {
