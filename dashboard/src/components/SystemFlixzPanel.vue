@@ -36,14 +36,25 @@ const visionModels = ref<{ id: string; label: string; provider: string; provider
 const canExtract = computed(() => config.value.videoPath.trim().length > 0 && !extracting.value)
 
 const describeModelOptions = computed(() => {
-  if (config.value.describe === 'gemini') {
+  const d = config.value.describe
+  if (d === 'gemini') {
     return visionModels.value.filter(m =>
       m.provider.includes('google') || m.id.toLowerCase().includes('gemini'),
     )
   }
-  if (config.value.describe === 'claude') {
+  if (d === 'claude') {
     return visionModels.value.filter(m =>
       m.provider.includes('anthropic') || m.id.toLowerCase().includes('claude'),
+    )
+  }
+  if (d === 'openai' || d === 'openai-codex') {
+    return visionModels.value.filter(m =>
+      m.provider.includes('openai') || m.id.toLowerCase().includes('gpt'),
+    )
+  }
+  if (d === 'grok' || d === 'xai' || d === 'xai-auth') {
+    return visionModels.value.filter(m =>
+      m.provider.includes('xai') || m.id.toLowerCase().includes('grok'),
     )
   }
   return []
@@ -193,12 +204,16 @@ onMounted(() => {
           <label class="sys-flixz-label">Frame Description</label>
           <select v-model="config.describe" class="input-base w-full text-xs" @change="config.describeModel = ''">
             <option value="none">None (frames only)</option>
-            <option value="gemini">Gemini Vision API</option>
-            <option value="claude">Claude Vision API</option>
+            <option value="gemini">Gemini Vision</option>
+            <option value="claude">Claude Vision (Anthropic)</option>
+            <option value="openai">OpenAI / Codex Vision</option>
+            <option value="grok">Grok Vision (xAI)</option>
           </select>
           <p class="sys-flixz-hint">
-            This is <strong>not</strong> your full pi chat model list. Flixz only runs Gemini/Claude vision backends for describing frames.
-            Your full models appear when creating agents (from <code>pi --list-models</code>).
+            Frame description uses a <strong>vision API backend</strong>, then you pick a model from that family
+            (filtered from your <code>pi --list-models</code> with images=yes).
+            Auth comes from <code>~/.pi/agent/auth.json</code> (openai-codex, xai-auth, etc.) or env keys.
+            Full chat model list is still under Create agent.
           </p>
         </div>
       </div>

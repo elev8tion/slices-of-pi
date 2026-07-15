@@ -487,7 +487,10 @@ async def extract_video(
 
         # ── 3. Frame descriptions (Gemini or Claude Vision) ────
         frame_descriptions: list[dict] = []
-        if describe in ("gemini", "claude"):
+        _VISION = {
+            "gemini", "claude", "openai", "openai-codex", "grok", "xai", "xai-auth",
+        }
+        if describe in _VISION:
             frame_descriptions = await _describe_frames(
                 frame_paths,
                 provider=describe,

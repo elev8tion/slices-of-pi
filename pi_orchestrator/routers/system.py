@@ -81,7 +81,15 @@ async def list_models(images_only: bool = False):
             "g0dm0d3-glm": "GLM (g0dm0d3)",
             "agua": "Agua",
             "fugu": "Fugu",
+            "openai-codex": "OpenAI Codex",
+            "xai-auth": "xAI Grok",
+            "xai": "xAI Grok",
         }
+
+        # Ensure codex / xai colors
+        PROVIDER_COLORS["openai-codex"] = PROVIDER_COLORS.get("openai-codex", "#22C55E")
+        PROVIDER_COLORS["xai-auth"] = "#E11D48"
+        PROVIDER_COLORS["xai"] = "#E11D48"
 
         # Format: provider model context max-out thinking images
         lines = output.split("\n")

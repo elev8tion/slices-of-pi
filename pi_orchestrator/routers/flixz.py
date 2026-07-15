@@ -24,7 +24,11 @@ class FlixzExtractRequest(BaseModel):
     fps: int = Field(0, ge=0, le=30)
     scene_detect: bool = True
     transcript: str = Field("none", pattern=r"^(none|native)$")
-    describe: str = Field("none", pattern=r"^(none|gemini|claude)$")
+    describe: str = Field(
+        "none",
+        pattern=r"^(none|gemini|claude|openai|openai-codex|grok|xai|xai-auth)$",
+        description="Vision backend: gemini|claude|openai|grok (aliases openai-codex, xai-auth)",
+    )
     describe_model: Optional[str] = Field(None, description="Optional vision model id from pi list")
     timeout_seconds: Optional[int] = Field(None, ge=10, le=3600)
 
